@@ -8,23 +8,30 @@
 import Foundation
 
 struct StorageService {
+    static let appGroupID = "group.com.vintuss.iexpense"
+
+    private static var userDefaults: UserDefaults? {
+        UserDefaults(suiteName: appGroupID)
+    }
+
     private static let expensesKey = "expenses"
 
     static func saveExpenses(_ expenses: [Expense]) {
+        guard let userDefaults = userDefaults else { return }
         do {
             let encoder = JSONEncoder()
             let data = try encoder.encode(expenses)
-            UserDefaults.standard.set(data, forKey: expensesKey)
+            userDefaults.set(data, forKey: expensesKey)
         } catch {
             print("Error saving expenses: \(error.localizedDescription)")
         }
     }
 
     static func loadExpenses() -> [Expense] {
-        guard let data = UserDefaults.standard.data(forKey: expensesKey) else {
+        guard let userDefaults = userDefaults,
+              let data = userDefaults.data(forKey: expensesKey) else {
             return []
         }
-
         do {
             let decoder = JSONDecoder()
             let expenses = try decoder.decode([Expense].self, from: data)
@@ -36,6 +43,7 @@ struct StorageService {
     }
 
     static func clearExpenses() {
-        UserDefaults.standard.removeObject(forKey: expensesKey)
+        guard let userDefaults = userDefaults else { return }
+        userDefaults.removeObject(forKey: expensesKey)
     }
 }

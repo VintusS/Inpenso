@@ -6,14 +6,86 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		714E831A2DBE3598005ED7BB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E83192DBE3597005ED7BB /* WidgetKit.framework */; };
+		714E831C2DBE3598005ED7BB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E831B2DBE3598005ED7BB /* SwiftUI.framework */; };
+		714E832D2DBE3599005ED7BB /* iExpenseWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 714E83172DBE3597005ED7BB /* iExpenseWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		714E832B2DBE3599005ED7BB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 714E82EB2DBE3124005ED7BB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 714E83162DBE3597005ED7BB;
+			remoteInfo = iExpenseWidgetExtensionExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		714E83322DBE3599005ED7BB /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				714E832D2DBE3599005ED7BB /* iExpenseWidgetExtensionExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		714E82F32DBE3124005ED7BB /* iExpense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iExpense.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		714E83172DBE3597005ED7BB /* iExpenseWidgetExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = iExpenseWidgetExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		714E83192DBE3597005ED7BB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		714E831B2DBE3598005ED7BB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		714E833D2DBE39CE005ED7BB /* iExpenseWidgetExtensionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iExpenseWidgetExtensionExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		714E832E2DBE3599005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "iExpenseWidgetExtensionExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */;
+		};
+		714E83342DBE3694005ED7BB /* Exceptions for "iExpense" folder in "iExpenseWidgetExtensionExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Models/Category.swift,
+				Models/Expense.swift,
+				Services/StorageService.swift,
+			);
+			target = 714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */;
+		};
+		714E833A2DBE37C2005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "iExpense" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				QuickAddConfigurationIntent.swift,
+			);
+			target = 714E82F22DBE3124005ED7BB /* iExpense */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		714E82F52DBE3124005ED7BB /* iExpense */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				714E83342DBE3694005ED7BB /* Exceptions for "iExpense" folder in "iExpenseWidgetExtensionExtension" target */,
+			);
 			path = iExpense;
+			sourceTree = "<group>";
+		};
+		714E831D2DBE3598005ED7BB /* iExpenseWidgetExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				714E833A2DBE37C2005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "iExpense" target */,
+				714E832E2DBE3599005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "iExpenseWidgetExtensionExtension" target */,
+			);
+			path = iExpenseWidgetExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -26,13 +98,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		714E83142DBE3597005ED7BB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				714E831C2DBE3598005ED7BB /* SwiftUI.framework in Frameworks */,
+				714E831A2DBE3598005ED7BB /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		714E82EA2DBE3124005ED7BB = {
 			isa = PBXGroup;
 			children = (
+				714E833D2DBE39CE005ED7BB /* iExpenseWidgetExtensionExtension.entitlements */,
 				714E82F52DBE3124005ED7BB /* iExpense */,
+				714E831D2DBE3598005ED7BB /* iExpenseWidgetExtension */,
+				714E83182DBE3597005ED7BB /* Frameworks */,
 				714E82F42DBE3124005ED7BB /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,8 +125,18 @@
 			isa = PBXGroup;
 			children = (
 				714E82F32DBE3124005ED7BB /* iExpense.app */,
+				714E83172DBE3597005ED7BB /* iExpenseWidgetExtensionExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		714E83182DBE3597005ED7BB /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				714E83192DBE3597005ED7BB /* WidgetKit.framework */,
+				714E831B2DBE3598005ED7BB /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -55,10 +149,12 @@
 				714E82EF2DBE3124005ED7BB /* Sources */,
 				714E82F02DBE3124005ED7BB /* Frameworks */,
 				714E82F12DBE3124005ED7BB /* Resources */,
+				714E83322DBE3599005ED7BB /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				714E832C2DBE3599005ED7BB /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				714E82F52DBE3124005ED7BB /* iExpense */,
@@ -69,6 +165,28 @@
 			productName = iExpense;
 			productReference = 714E82F32DBE3124005ED7BB /* iExpense.app */;
 			productType = "com.apple.product-type.application";
+		};
+		714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 714E832F2DBE3599005ED7BB /* Build configuration list for PBXNativeTarget "iExpenseWidgetExtensionExtension" */;
+			buildPhases = (
+				714E83132DBE3597005ED7BB /* Sources */,
+				714E83142DBE3597005ED7BB /* Frameworks */,
+				714E83152DBE3597005ED7BB /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				714E831D2DBE3598005ED7BB /* iExpenseWidgetExtension */,
+			);
+			name = iExpenseWidgetExtensionExtension;
+			packageProductDependencies = (
+			);
+			productName = iExpenseWidgetExtensionExtension;
+			productReference = 714E83172DBE3597005ED7BB /* iExpenseWidgetExtensionExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -81,6 +199,9 @@
 				LastUpgradeCheck = 1630;
 				TargetAttributes = {
 					714E82F22DBE3124005ED7BB = {
+						CreatedOnToolsVersion = 16.3;
+					};
+					714E83162DBE3597005ED7BB = {
 						CreatedOnToolsVersion = 16.3;
 					};
 				};
@@ -100,12 +221,20 @@
 			projectRoot = "";
 			targets = (
 				714E82F22DBE3124005ED7BB /* iExpense */,
+				714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		714E82F12DBE3124005ED7BB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		714E83152DBE3597005ED7BB /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +251,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		714E83132DBE3597005ED7BB /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		714E832C2DBE3599005ED7BB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */;
+			targetProxy = 714E832B2DBE3599005ED7BB /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		714E82FC2DBE3126005ED7BB /* Debug */ = {
@@ -251,6 +395,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iExpense/iExpense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = K9YT824399;
@@ -280,6 +425,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = iExpense/iExpense.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = K9YT824399;
@@ -304,6 +450,64 @@
 			};
 			name = Release;
 		};
+		714E83302DBE3599005ED7BB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = iExpenseWidgetExtensionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K9YT824399;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = iExpenseWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = iExpenseWidgetExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.iExpense.iExpenseWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		714E83312DBE3599005ED7BB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = iExpenseWidgetExtensionExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = K9YT824399;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = iExpenseWidgetExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = iExpenseWidgetExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.iExpense.iExpenseWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -321,6 +525,15 @@
 			buildConfigurations = (
 				714E82FF2DBE3126005ED7BB /* Debug */,
 				714E83002DBE3126005ED7BB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		714E832F2DBE3599005ED7BB /* Build configuration list for PBXNativeTarget "iExpenseWidgetExtensionExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				714E83302DBE3599005ED7BB /* Debug */,
+				714E83312DBE3599005ED7BB /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
