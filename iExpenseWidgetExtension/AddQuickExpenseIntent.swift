@@ -10,17 +10,17 @@ struct AddQuickExpenseIntent: AppIntent {
     @Parameter(title: "Title")
     var title: String
 
-    @Parameter(title: "Amount")
-    var amount: Double
+    @Parameter(title: "Price")
+    var price: Double
 
     @Parameter(title: "Category")
     var category: String
 
     init() {}
 
-    init(title: String, amount: Double, category: String) {
+    init(title: String, price: Double, category: String) {
         self.title = title
-        self.amount = amount
+        self.price = price
         self.category = category
     }
 
@@ -28,7 +28,7 @@ struct AddQuickExpenseIntent: AppIntent {
         var expenses = StorageService.loadExpenses()
         let newExpense = Expense(
             title: title,
-            amount: amount,
+            price: price,
             date: Date(),
             category: Category(rawValue: category) ?? .others
         )

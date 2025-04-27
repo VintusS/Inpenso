@@ -35,7 +35,7 @@ struct ExpensesListView: View {
                             VStack(alignment: .leading) {
                                 Text(expense.title)
                                     .font(.headline)
-                                Text("\(expense.amount, format: .currency(code: "USD"))")
+                                Text("\(expense.price, format: .currency(code: "USD"))")
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                                 Text(expense.date, style: .date)

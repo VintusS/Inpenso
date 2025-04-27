@@ -12,7 +12,7 @@ struct AddExpenseView: View {
     @ObservedObject var viewModel: ExpenseViewModel
     
     @State private var title: String = ""
-    @State private var amount: String = ""
+    @State private var price: String = ""
     @State private var selectedCategory: Category = .food
 
     var body: some View {
@@ -21,7 +21,7 @@ struct AddExpenseView: View {
                 Section(header: Text("Expense Details")) {
                     TextField("Title", text: $title)
                     
-                    TextField("Amount", text: $amount)
+                    TextField("Amount", text: $price)
                         .keyboardType(.decimalPad)
                     
                     Picker("Category", selection: $selectedCategory) {
@@ -37,7 +37,7 @@ struct AddExpenseView: View {
                     Button("Save") {
                         saveExpense()
                     }
-                    .disabled(title.isEmpty || amount.isEmpty)
+                    .disabled(title.isEmpty || price.isEmpty)
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -49,8 +49,8 @@ struct AddExpenseView: View {
     }
     
     private func saveExpense() {
-        guard let amountValue = Double(amount) else { return }
-        viewModel.addExpense(title: title, amount: amountValue, category: selectedCategory)
+        guard let priceValue = Double(price) else { return }
+        viewModel.addExpense(title: title, price: priceValue, category: selectedCategory)
         dismiss()
     }
 }

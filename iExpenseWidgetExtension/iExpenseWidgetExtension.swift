@@ -32,17 +32,17 @@ struct iExpenseWidgetEntryView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Button(intent: AddQuickExpenseIntent(title: "Coffee", amount: 5.0, category: "food")) {
+            Button(intent: AddQuickExpenseIntent(title: "Coffee", price: 5.0, category: "food")) {
                 Label("Add Coffee", systemImage: "cup.and.saucer.fill")
             }
             .buttonStyle(.borderedProminent)
 
-            Button(intent: AddQuickExpenseIntent(title: "Bus Ticket", amount: 2.5, category: "transportation")) {
+            Button(intent: AddQuickExpenseIntent(title: "Bus Ticket", price: 2.5, category: "transportation")) {
                 Label("Add Bus", systemImage: "bus.fill")
             }
             .buttonStyle(.borderedProminent)
 
-            Button(intent: AddQuickExpenseIntent(title: "Groceries", amount: 20.0, category: "shopping")) {
+            Button(intent: AddQuickExpenseIntent(title: "Groceries", price: 20.0, category: "shopping")) {
                 Label("Add Groceries", systemImage: "cart.fill")
             }
             .buttonStyle(.borderedProminent)

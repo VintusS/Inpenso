@@ -12,26 +12,30 @@ struct AddExpenseSiriIntent: AppIntent {
     static var title: LocalizedStringResource = "Add an Expense"
     static var description = IntentDescription("Quickly add a new expense to iExpense via Siri or Shortcuts.")
 
-    static var openAppWhenRun: Bool = true
+    static var openAppWhenRun: Bool = false
 
-    @Parameter(title: "Title", description: "What was the expense for?")
+    static var dialog: IntentDialog {
+        IntentDialog("Let's add a new expense.")
+    }
+
+    @Parameter(title: "Expense Name")
     var title: String
 
-    @Parameter(title: "Amount", description: "How much did you spend?")
-    var amount: Double
+    @Parameter(title: "Expense Price")
+    var price: Double
 
-    @Parameter(title: "Category", description: "Expense category")
+    @Parameter(title: "Expense Category")
     var category: Category
 
     static var parameterSummary: some ParameterSummary {
-        Summary("Add \(\.$title) for \(\.$amount) in \(\.$category)")
+        Summary("What did you spend money on? \(\.$title), how much did you spend? \(\.$price), and what category does it belong to? \(\.$category)")
     }
 
     func perform() async throws -> some IntentResult {
         var expenses = StorageService.loadExpenses()
         let newExpense = Expense(
             title: title,
-            amount: amount,
+            price: price,
             date: Date(),
             category: category
         )

@@ -38,11 +38,11 @@ class AnalyticsViewModel: ObservableObject {
             return expenseMonth == selectedMonth && expenseYear == selectedYear
         }
         
-        totalSpent = filteredExpenses.reduce(0) { $0 + $1.amount }
+        totalSpent = filteredExpenses.reduce(0) { $0 + $1.price }
         
         var categoryTotals: [Category: Double] = [:]
         for expense in filteredExpenses {
-            categoryTotals[expense.category, default: 0] += expense.amount
+            categoryTotals[expense.category, default: 0] += expense.price
         }
         spendingByCategory = categoryTotals
         

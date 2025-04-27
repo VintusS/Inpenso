@@ -34,9 +34,9 @@ struct AnalyticsView: View {
                             .padding()
                     } else {
                         Chart {
-                            ForEach(analyticsViewModel.spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { category, amount in
+                            ForEach(analyticsViewModel.spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { category, price in
                                 SectorMark(
-                                    angle: .value("Amount", amount),
+                                    angle: .value("Price", price),
                                     innerRadius: .ratio(0.5),
                                     angularInset: 1.5
                                 )
@@ -114,7 +114,7 @@ struct AnalyticsView: View {
 
                 Spacer()
 
-                TextField("Amount", value: $analyticsViewModel.currentBudget, format: .currency(code: "USD"))
+                TextField("Price", value: $analyticsViewModel.currentBudget, format: .currency(code: "USD"))
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 120)

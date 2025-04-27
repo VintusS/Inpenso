@@ -37,12 +37,12 @@ struct HomeView: View {
 
             if !analyticsViewModel.spendingByCategory.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
-                    ForEach(analyticsViewModel.spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { category, amount in
+                    ForEach(analyticsViewModel.spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { category, price in
                         HStack {
                             Text(category.displayName)
                                 .font(.subheadline)
                             Spacer()
-                            Text(amount, format: .currency(code: "USD"))
+                            Text(price, format: .currency(code: "USD"))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
