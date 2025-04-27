@@ -12,26 +12,28 @@ struct MainTabView: View {
     @StateObject private var analyticsViewModel = AnalyticsViewModel(expenses: [])
 
     var body: some View {
-        TabView {
-            HomeView(viewModel: viewModel, analyticsViewModel: analyticsViewModel)
-                .tabItem {
-                    Label("Home", systemImage: "house.fill")
-                }
+        NavigationView {
+            TabView {
+                HomeView(viewModel: viewModel, analyticsViewModel: analyticsViewModel)
+                    .tabItem {
+                        Label("Home", systemImage: "house.fill")
+                    }
 
-            AnalyticsView(analyticsViewModel: analyticsViewModel)
-                .tabItem {
-                    Label("Analytics", systemImage: "chart.pie.fill")
-                }
+                AnalyticsView(analyticsViewModel: analyticsViewModel)
+                    .tabItem {
+                        Label("Analytics", systemImage: "chart.pie.fill")
+                    }
 
-            ExpensesListView(viewModel: viewModel)
-                .tabItem {
-                    Label("Expenses", systemImage: "list.bullet.rectangle.portrait.fill")
-                }
+                ExpensesListView(viewModel: viewModel)
+                    .tabItem {
+                        Label("Expenses", systemImage: "list.bullet.rectangle.portrait.fill")
+                    }
 
-            SettingsView()
-                .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
-                }
+                SettingsView()
+                    .tabItem {
+                        Label("Settings", systemImage: "gearshape.fill")
+                    }
+            }
         }
         .onAppear {
             analyticsViewModel.updateExpenses(viewModel.expenses)
@@ -39,7 +41,6 @@ struct MainTabView: View {
         .onChange(of: viewModel.expenses) { newExpenses in
             analyticsViewModel.updateExpenses(newExpenses)
         }
-
     }
 }
 

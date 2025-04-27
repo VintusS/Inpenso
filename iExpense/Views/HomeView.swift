@@ -10,6 +10,7 @@ import SwiftUI
 struct HomeView: View {
     @ObservedObject var viewModel: ExpenseViewModel
     @ObservedObject var analyticsViewModel: AnalyticsViewModel
+    @State private var showingAddExpense = false
 
     var body: some View {
         NavigationView {
@@ -21,6 +22,18 @@ struct HomeView: View {
                 Spacer()
             }
             .navigationTitle("Overview")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: {
+                        showingAddExpense = true
+                    }) {
+                        Image(systemName: "plus")
+                    }
+                }
+            }
+            .sheet(isPresented: $showingAddExpense) {
+                AddExpenseView(viewModel: viewModel)
+            }
         }
     }
 

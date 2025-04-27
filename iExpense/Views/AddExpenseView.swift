@@ -10,7 +10,7 @@ import SwiftUI
 struct AddExpenseView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: ExpenseViewModel
-    
+
     @State private var title: String = ""
     @State private var price: String = ""
     @State private var selectedCategory: Category = .food
@@ -18,31 +18,35 @@ struct AddExpenseView: View {
     var body: some View {
         NavigationView {
             Form {
-                Section(header: Text("Expense Details")) {
-                    TextField("Title", text: $title)
+                Section {
+                    TextField("Expense Title", text: $title)
                     
-                    TextField("Amount", text: $price)
+                    TextField("Price", text: $price)
                         .keyboardType(.decimalPad)
                     
                     Picker("Category", selection: $selectedCategory) {
                         ForEach(Category.allCases, id: \.self) { category in
-                            Text(category.displayName).tag(category)
+                            Text(category.displayName)
                         }
                     }
+                } header: {
+                    Text("Expense Details")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
                 }
             }
             .navigationTitle("Add Expense")
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         saveExpense()
                     }
                     .disabled(title.isEmpty || price.isEmpty)
-                }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
                 }
             }
         }
