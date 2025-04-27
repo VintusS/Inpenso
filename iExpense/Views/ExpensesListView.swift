@@ -152,8 +152,6 @@ struct ExpensesListView: View {
             .frame(height: 80)
             .onChange(of: selectedDateIndex) { newIndex in
                 let monthYearList = generateMonthYearList()
-
-                // Protect against scrolling into the future
                 let today = Date()
                 let calendar = Calendar.current
                 let todayMonth = calendar.component(.month, from: today)

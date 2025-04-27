@@ -7,49 +7,82 @@ import AppIntents
 
 struct ExpenseEntry: TimelineEntry {
     let date: Date
+    let totalSpent: Double
+    let spendingByCategory: [Category: Double]
 }
 
 struct ExpenseQuickAddProvider: AppIntentTimelineProvider {
     typealias Intent = QuickAddConfigurationIntent
 
     func placeholder(in context: Context) -> ExpenseEntry {
-        ExpenseEntry(date: Date())
+        ExpenseEntry(date: Date(), totalSpent: 0, spendingByCategory: [:])
     }
 
     func snapshot(for configuration: QuickAddConfigurationIntent, in context: Context) async -> ExpenseEntry {
-        ExpenseEntry(date: Date())
+        await loadEntry()
     }
 
     func timeline(for configuration: QuickAddConfigurationIntent, in context: Context) async -> Timeline<ExpenseEntry> {
-        let entry = ExpenseEntry(date: Date())
-        return Timeline(entries: [entry], policy: .never)
+        let entry = await loadEntry()
+        let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(3600))) // refresh every 1h
+        return timeline
+    }
+
+    private func loadEntry() async -> ExpenseEntry {
+        let expenses = StorageService.loadExpenses()
+
+        let calendar = Calendar.current
+        let currentMonth = calendar.component(.month, from: Date())
+        let currentYear = calendar.component(.year, from: Date())
+
+        let filteredExpenses = expenses.filter { expense in
+            let month = calendar.component(.month, from: expense.date)
+            let year = calendar.component(.year, from: expense.date)
+            return month == currentMonth && year == currentYear
+        }
+
+        let total = filteredExpenses.reduce(0) { $0 + $1.price }
+
+        var categoryTotals: [Category: Double] = [:]
+        for expense in filteredExpenses {
+            categoryTotals[expense.category, default: 0] += expense.price
+        }
+
+        return ExpenseEntry(date: Date(), totalSpent: total, spendingByCategory: categoryTotals)
     }
 }
-
 
 struct iExpenseWidgetEntryView: View {
     var entry: ExpenseEntry
 
     var body: some View {
-        VStack(spacing: 10) {
-            Button(intent: AddQuickExpenseIntent(title: "Coffee", price: 5.0, category: "food")) {
-                Label("Add Coffee", systemImage: "cup.and.saucer.fill")
-            }
-            .buttonStyle(.borderedProminent)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Total Spent")
+                .font(.headline)
+                .foregroundColor(.secondary)
 
-            Button(intent: AddQuickExpenseIntent(title: "Bus Ticket", price: 2.5, category: "transportation")) {
-                Label("Add Bus", systemImage: "bus.fill")
-            }
-            .buttonStyle(.borderedProminent)
+            Text(entry.totalSpent, format: .currency(code: "USD"))
+                .font(.title2)
+                .fontWeight(.bold)
 
-            Button(intent: AddQuickExpenseIntent(title: "Groceries", price: 20.0, category: "shopping")) {
-                Label("Add Groceries", systemImage: "cart.fill")
+            if !entry.spendingByCategory.isEmpty {
+                Divider()
+                ForEach(entry.spendingByCategory.sorted(by: { $0.value > $1.value }).prefix(2), id: \.key) { category, amount in
+                    HStack {
+                        Text(category.displayName)
+                            .font(.caption)
+                        Spacer()
+                        Text(amount, format: .currency(code: "USD"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
             }
-            .buttonStyle(.borderedProminent)
         }
         .padding()
     }
 }
+
 
 struct iExpenseWidgetExtension: Widget {
     let kind: String = "iExpenseWidgetExtension"
@@ -65,5 +98,13 @@ struct iExpenseWidgetExtension: Widget {
 #Preview(as: .systemSmall) {
     iExpenseWidgetExtension()
 } timeline: {
-    ExpenseEntry(date: .now)
+    ExpenseEntry(
+        date: .now,
+        totalSpent: 125.75,
+        spendingByCategory: [
+            .food: 50.00,
+            .shopping: 75.75
+        ]
+    )
 }
+
