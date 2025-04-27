@@ -14,6 +14,8 @@ struct ExpensesListView: View {
     @State private var recentlyDeletedExpenses: [Expense] = []
     @State private var showUndoSnackbar: Bool = false
     @State private var undoTimer: Timer? = nil
+    @State private var selectedExpenseToEdit: Expense? = nil
+    @State private var showingEditSheet: Bool = false
 
     private let monthsPerYear = 12
     private let yearRange = 5
@@ -46,6 +48,23 @@ struct ExpensesListView: View {
                                     .foregroundColor(.gray)
                             }
                             .padding(.vertical, 4)
+                            .swipeActions(edge: .leading) {
+                                Button(role: .destructive) {
+                                    deleteExpenseByID(expense)
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            }
+                            .swipeActions(edge: .trailing) {
+                                Button {
+                                    selectedExpenseToEdit = expense
+                                    showingEditSheet = true
+                                } label: {
+                                    Label("Edit", systemImage: "pencil")
+                                }
+                                .tint(.blue)
+                            }
+
                         }
                         .onDelete { offsets in
                             let expensesToDelete = offsets.map { sortedExpenses(for: category)[$0] }
@@ -100,7 +119,11 @@ struct ExpensesListView: View {
                     }
                 }
             )
-
+            .sheet(isPresented: $showingEditSheet) {
+                if let expenseToEdit = selectedExpenseToEdit {
+                    EditExpenseView(viewModel: viewModel, expense: expenseToEdit)
+                }
+            }
         }
     }
 
@@ -201,6 +224,23 @@ struct ExpensesListView: View {
 
         viewModel.saveExpenses()
     }
+    
+    private func deleteExpenseByID(_ expense: Expense) {
+        if let index = viewModel.expenses.firstIndex(where: { $0.id == expense.id }) {
+            recentlyDeletedExpenses = [expense]
+            viewModel.expenses.remove(at: index)
+            viewModel.saveExpenses()
+            
+            showUndoSnackbar = true
+            
+            undoTimer?.invalidate()
+            undoTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { _ in
+                showUndoSnackbar = false
+                recentlyDeletedExpenses.removeAll()
+            }
+        }
+    }
+
     
     private func undoDelete() {
         undoTimer?.invalidate()
