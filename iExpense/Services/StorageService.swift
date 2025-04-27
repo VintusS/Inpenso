@@ -15,6 +15,7 @@ struct StorageService {
     }
 
     private static let expensesKey = "expenses"
+    private static let budgetsKey = "budgets"
 
     static func saveExpenses(_ expenses: [Expense]) {
         guard let userDefaults = userDefaults else { return }
@@ -39,6 +40,30 @@ struct StorageService {
         } catch {
             print("Error loading expenses: \(error.localizedDescription)")
             return []
+        }
+    }
+    
+    static func saveBudgets(_ budgets: [String: Double]) {
+        guard let userDefaults = userDefaults else { return }
+        do {
+            let data = try JSONEncoder().encode(budgets)
+            userDefaults.set(data, forKey: budgetsKey)
+        } catch {
+            print("Error saving budgets: \(error.localizedDescription)")
+        }
+    }
+
+    static func loadBudgets() -> [String: Double] {
+        guard let userDefaults = userDefaults,
+              let data = userDefaults.data(forKey: budgetsKey) else {
+            return [:]
+        }
+        do {
+            let budgets = try JSONDecoder().decode([String: Double].self, from: data)
+            return budgets
+        } catch {
+            print("Error loading budgets: \(error.localizedDescription)")
+            return [:]
         }
     }
 

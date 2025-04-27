@@ -23,6 +23,7 @@ class AnalyticsViewModel: ObservableObject {
     init(expenses: [Expense]) {
         self.expenses = expenses
         calculateAnalytics()
+        self.monthlyBudgets = StorageService.loadBudgets()
     }
     
     func updateExpenses(_ expenses: [Expense]) {
