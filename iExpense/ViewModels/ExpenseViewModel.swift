@@ -34,5 +34,14 @@ class ExpenseViewModel: ObservableObject {
     func loadExpenses() {
         expenses = StorageService.loadExpenses()
     }
+    
+    func deleteExpenses(_ expenses: [Expense]) {
+        for expense in expenses {
+            if let index = self.expenses.firstIndex(where: { $0.id == expense.id }) {
+                self.expenses.remove(at: index)
+            }
+        }
+        saveExpenses()
+    }
 
 }

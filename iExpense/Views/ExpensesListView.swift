@@ -11,6 +11,9 @@ struct ExpensesListView: View {
     @State private var selectedMonth: Int = Calendar.current.component(.month, from: Date())
     @State private var selectedYear: Int = Calendar.current.component(.year, from: Date())
     @State private var selectedDateIndex: Int = 0
+    @State private var recentlyDeletedExpenses: [Expense] = []
+    @State private var showUndoSnackbar: Bool = false
+    @State private var undoTimer: Timer? = nil
 
     private let monthsPerYear = 12
     private let yearRange = 5
@@ -45,8 +48,19 @@ struct ExpensesListView: View {
                             .padding(.vertical, 4)
                         }
                         .onDelete { offsets in
-                            deleteExpense(at: offsets, in: category)
+                            let expensesToDelete = offsets.map { sortedExpenses(for: category)[$0] }
+                            recentlyDeletedExpenses = expensesToDelete
+                            viewModel.deleteExpenses(expensesToDelete)
+
+                            showUndoSnackbar = true
+
+                            undoTimer?.invalidate()
+                            undoTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { _ in
+                                showUndoSnackbar = false
+                                recentlyDeletedExpenses.removeAll()
+                            }
                         }
+
                     }
                 }
             }
@@ -63,6 +77,30 @@ struct ExpensesListView: View {
             .onAppear {
                 syncSelectedDateIndex()
             }
+            .overlay(
+                VStack {
+                    Spacer()
+                    if showUndoSnackbar {
+                        HStack {
+                            Text("Expense deleted")
+                                .foregroundColor(.white)
+                            Spacer()
+                            Button("Undo") {
+                                undoDelete()
+                            }
+                            .foregroundColor(.yellow)
+                            .fontWeight(.bold)
+                        }
+                        .padding()
+                        .background(Color.black.opacity(0.8))
+                        .cornerRadius(12)
+                        .padding(.horizontal)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .animation(.easeInOut, value: showUndoSnackbar)
+                    }
+                }
+            )
+
         }
     }
 
@@ -152,19 +190,27 @@ struct ExpensesListView: View {
     }
 
     private func deleteExpense(at offsets: IndexSet, in category: Category) {
-        guard var expensesInCategory = groupedExpenses[category] else { return }
-        expensesInCategory.remove(atOffsets: offsets)
+        guard let expensesInCategory = groupedExpenses[category] else { return }
+        let expensesToDelete = offsets.map { expensesInCategory[$0] }
 
-        viewModel.expenses = groupedExpenses
-            .flatMap { key, value -> [Expense] in
-                if key == category {
-                    return expensesInCategory
-                } else {
-                    return value
-                }
+        for expense in expensesToDelete {
+            if let indexInMainList = viewModel.expenses.firstIndex(where: { $0.id == expense.id }) {
+                viewModel.expenses.remove(at: indexInMainList)
             }
+        }
+
         viewModel.saveExpenses()
     }
+    
+    private func undoDelete() {
+        undoTimer?.invalidate()
+        viewModel.expenses.append(contentsOf: recentlyDeletedExpenses)
+        viewModel.saveExpenses()
+        recentlyDeletedExpenses.removeAll()
+        showUndoSnackbar = false
+    }
+
+
 }
 
 #Preview {

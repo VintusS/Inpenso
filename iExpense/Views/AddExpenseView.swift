@@ -53,6 +53,7 @@ struct AddExpenseView: View {
     }
     
     private func saveExpense() {
+        price.replace(",", with: ".")
         guard let priceValue = Double(price) else { return }
         viewModel.addExpense(title: title, price: priceValue, category: selectedCategory)
         dismiss()
