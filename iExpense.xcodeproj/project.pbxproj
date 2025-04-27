@@ -10,6 +10,8 @@
 		714E831A2DBE3598005ED7BB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E83192DBE3597005ED7BB /* WidgetKit.framework */; };
 		714E831C2DBE3598005ED7BB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E831B2DBE3598005ED7BB /* SwiftUI.framework */; };
 		714E832D2DBE3599005ED7BB /* iExpenseWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 714E83172DBE3597005ED7BB /* iExpenseWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		714E834D2DBE654D005ED7BB /* ProjectPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714E834C2DBE654D005ED7BB /* ProjectPlan.swift */; };
+		714E834E2DBE654D005ED7BB /* ProjectPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714E834C2DBE654D005ED7BB /* ProjectPlan.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,6 +44,7 @@
 		714E83192DBE3597005ED7BB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		714E831B2DBE3598005ED7BB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		714E833D2DBE39CE005ED7BB /* iExpenseWidgetExtensionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iExpenseWidgetExtensionExtension.entitlements; sourceTree = "<group>"; };
+		714E834C2DBE654D005ED7BB /* ProjectPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectPlan.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -113,6 +116,7 @@
 		714E82EA2DBE3124005ED7BB = {
 			isa = PBXGroup;
 			children = (
+				714E834C2DBE654D005ED7BB /* ProjectPlan.swift */,
 				714E833D2DBE39CE005ED7BB /* iExpenseWidgetExtensionExtension.entitlements */,
 				714E82F52DBE3124005ED7BB /* iExpense */,
 				714E831D2DBE3598005ED7BB /* iExpenseWidgetExtension */,
@@ -248,6 +252,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				714E834D2DBE654D005ED7BB /* ProjectPlan.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -255,6 +260,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				714E834E2DBE654D005ED7BB /* ProjectPlan.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
