@@ -7,6 +7,7 @@
 
 import Foundation
 import AppIntents
+import SwiftUI
 
 enum Category: String, CaseIterable, Codable, AppEnum {
     case food
@@ -50,3 +51,31 @@ enum Category: String, CaseIterable, Codable, AppEnum {
         .others: "Others"
     ]
 }
+
+extension Category {
+    var color: Color {
+        switch self {
+        case .food:
+            return .green
+        case .rent:
+            return .purple
+        case .shopping:
+            return .orange
+        case .entertainment:
+            return .pink
+        case .transportation:
+            return .blue
+        case .utilities:
+            return .yellow
+        case .subscriptions:
+            return .teal
+        case .healthcare:
+            return .red
+        case .education:
+            return .indigo
+        case .others:
+            return .gray
+        }
+    }
+}
+

@@ -37,15 +37,21 @@ struct ExpensesListView: View {
                 ForEach(groupedExpenses.keys.sorted(by: { $0.displayName < $1.displayName }), id: \.self) { category in
                     Section(header: Text(category.displayName)) {
                         ForEach(sortedExpenses(for: category)) { expense in
-                            VStack(alignment: .leading) {
-                                Text(expense.title)
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(expense.title)
+                                        .font(.headline)
+
+                                    Text(expense.date, style: .date)
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                }
+
+                                Spacer()
+
+                                Text(expense.price, format: .currency(code: currentCurrencyCode()))
                                     .font(.headline)
-                                Text("\(expense.price, format: .currency(code: "USD"))")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                Text(expense.date, style: .date)
-                                    .font(.caption)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(.primary)
                             }
                             .padding(.vertical, 4)
                             .swipeActions(edge: .leading) {
@@ -149,7 +155,7 @@ struct ExpensesListView: View {
                 }
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            .frame(height: 80)
+            .frame(height: 40)
             .onChange(of: selectedDateIndex) { newIndex in
                 let monthYearList = generateMonthYearList()
                 let today = Date()

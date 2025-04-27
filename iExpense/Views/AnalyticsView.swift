@@ -33,19 +33,39 @@ struct AnalyticsView: View {
                             .foregroundColor(.secondary)
                             .padding()
                     } else {
-                        Chart {
-                            ForEach(analyticsViewModel.spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { category, price in
-                                SectorMark(
-                                    angle: .value("Price", price),
-                                    innerRadius: .ratio(0.5),
-                                    angularInset: 1.5
-                                )
-                                .foregroundStyle(by: .value("Category", category.displayName))
+                        VStack(spacing: 24) {
+                            Chart {
+                                ForEach(analyticsViewModel.spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { category, price in
+                                    SectorMark(
+                                        angle: .value("Price", price),
+                                        innerRadius: .ratio(0.5),
+                                        angularInset: 1.5
+                                    )
+                                    .foregroundStyle(category.color)
+                                }
                             }
+                            .frame(height: 300)
+                            .padding(.horizontal)
+                            .chartLegend(.hidden)
+
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(analyticsViewModel.spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { category, price in
+                                    HStack {
+                                        Circle()
+                                            .frame(width: 12, height: 12)
+                                            .foregroundStyle(category.color)
+                                        Text(category.displayName)
+                                            .font(.caption)
+                                        Spacer()
+                                        Text(price, format: .currency(code: currentCurrencyCode()))
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal)
                         }
-                        .chartLegend(.visible)
-                        .frame(height: 300)
-                        .padding()
+
                     }
                 }
                 .padding()
@@ -75,7 +95,6 @@ struct AnalyticsView: View {
                     .padding()
                     .background(Color(.secondarySystemBackground))
                     .cornerRadius(12)
-                    .padding(.horizontal)
                     .tag(index)
             }
         }
@@ -103,7 +122,6 @@ struct AnalyticsView: View {
                 }
             }
         }
-
     }
     
     private var budgetSection: some View {
@@ -114,7 +132,7 @@ struct AnalyticsView: View {
 
                 Spacer()
 
-                TextField("Price", value: $analyticsViewModel.currentBudget, format: .currency(code: "USD"))
+                TextField("Price", value: $analyticsViewModel.currentBudget, format: .currency(code: currentCurrencyCode()))
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
                     .frame(width: 120)
@@ -134,7 +152,6 @@ struct AnalyticsView: View {
             }
             .buttonStyle(.borderedProminent)
         }
-        .padding()
     }
 
     private var spendingVsBudgetSection: some View {
@@ -148,12 +165,11 @@ struct AnalyticsView: View {
                     .scaleEffect(x: 1, y: 2, anchor: .center)
                     .padding(.vertical)
 
-                Text("Spent \(analyticsViewModel.totalSpent, format: .currency(code: "USD")) out of \(analyticsViewModel.currentBudget, format: .currency(code: "USD"))")
+                Text("Spent \(analyticsViewModel.totalSpent, format: .currency(code: currentCurrencyCode())) out of \(analyticsViewModel.currentBudget, format: .currency(code: currentCurrencyCode()))")
                     .font(.subheadline)
                     .foregroundColor(progress >= 1.0 ? .red : .primary)
             }
         }
-        .padding(.horizontal)
     }
 
     private func saveBudget() {
@@ -180,16 +196,6 @@ struct AnalyticsView: View {
         let currentYear = Calendar.current.component(.year, from: Date())
         let currentMonth = Calendar.current.component(.month, from: Date())
         selectedDateIndex = (currentYear - (Calendar.current.component(.year, from: Date()) - yearRange)) * monthsPerYear + (currentMonth - 1)
-    }
-    
-    private func monthYearItem(month: Int, year: Int, isSelected: Bool) -> some View {
-        Text("\(Calendar.current.monthSymbols[month - 1]) \(year)")
-            .font(isSelected ? .headline : .subheadline)
-            .fontWeight(isSelected ? .bold : .regular)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 16)
-            .background(isSelected ? Color.blue.opacity(0.2) : Color.clear)
-            .cornerRadius(12)
     }
 
     private func generateMonthYearList() -> [(month: Int, year: Int)] {

@@ -4,6 +4,7 @@
 import WidgetKit
 import SwiftUI
 import AppIntents
+import Foundation
 
 struct ExpenseEntry: TimelineEntry {
     let date: Date
@@ -61,7 +62,7 @@ struct iExpenseWidgetEntryView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
 
-            Text(entry.totalSpent, format: .currency(code: "USD"))
+            Text(entry.totalSpent, format: .currency(code: currentCurrencyCode()))
                 .font(.title2)
                 .fontWeight(.bold)
 
@@ -72,7 +73,7 @@ struct iExpenseWidgetEntryView: View {
                         Text(category.displayName)
                             .font(.caption)
                         Spacer()
-                        Text(amount, format: .currency(code: "USD"))
+                        Text(amount, format: .currency(code: currentCurrencyCode()))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }

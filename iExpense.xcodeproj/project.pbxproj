@@ -61,6 +61,7 @@
 				Models/Category.swift,
 				Models/Expense.swift,
 				Services/StorageService.swift,
+				Utils/CurrencyCode.swift,
 			);
 			target = 714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */;
 		};

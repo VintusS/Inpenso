@@ -43,7 +43,7 @@ struct HomeView: View {
                 .font(.title)
                 .fontWeight(.bold)
 
-            Text(analyticsViewModel.totalSpent, format: .currency(code: "USD"))
+            Text(analyticsViewModel.totalSpent, format: .currency(code: currentCurrencyCode()))
                 .font(.largeTitle)
                 .fontWeight(.semibold)
                 .foregroundColor(.blue)
@@ -55,7 +55,7 @@ struct HomeView: View {
                             Text(category.displayName)
                                 .font(.subheadline)
                             Spacer()
-                            Text(price, format: .currency(code: "USD"))
+                            Text(price, format: .currency(code: currentCurrencyCode()))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
