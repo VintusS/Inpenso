@@ -13,6 +13,7 @@ struct EditExpenseView: View {
 
     @State private var title: String
     @State private var price: String
+    @State private var selectedDate: Date
     @State private var selectedCategory: Category
     let expense: Expense
 
@@ -21,6 +22,7 @@ struct EditExpenseView: View {
         self.expense = expense
         _title = State(initialValue: expense.title)
         _price = State(initialValue: String(format: "%.2f", expense.price))
+        _selectedDate = State(initialValue: expense.date)
         _selectedCategory = State(initialValue: expense.category)
     }
 
@@ -32,12 +34,33 @@ struct EditExpenseView: View {
 
                     TextField("Price", text: $price)
                         .keyboardType(.decimalPad)
-
-                    Picker("Category", selection: $selectedCategory) {
+                        
+                    DatePicker("Date", selection: $selectedDate, displayedComponents: .date)
+                }
+                
+                Section {
+                    Text("Category")
+                        .font(.headline)
+                        .foregroundColor(.secondary)
+                        .listRowSeparator(.hidden)
+                    
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 15) {
                         ForEach(Category.allCases, id: \.self) { category in
-                            Text(category.displayName)
+                            CategoryButton(
+                                category: category,
+                                isSelected: selectedCategory == category,
+                                action: {
+                                    selectedCategory = category
+                                    triggerHaptic()
+                                }
+                            )
                         }
                     }
+                    .padding(.vertical, 5)
                 }
 
                 Section {
@@ -74,6 +97,7 @@ struct EditExpenseView: View {
         if let index = viewModel.expenses.firstIndex(where: { $0.id == expense.id }) {
             viewModel.expenses[index].title = title
             viewModel.expenses[index].price = priceValue
+            viewModel.expenses[index].date = selectedDate
             viewModel.expenses[index].category = selectedCategory
             viewModel.saveExpenses()
         }
@@ -84,6 +108,11 @@ struct EditExpenseView: View {
             viewModel.expenses.remove(at: index)
             viewModel.saveExpenses()
         }
+    }
+    
+    private func triggerHaptic() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
     }
 }
 

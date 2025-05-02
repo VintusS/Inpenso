@@ -11,6 +11,7 @@ import SwiftUI
 
 enum Category: String, CaseIterable, Codable, AppEnum {
     case food
+    case eatingOut
     case rent
     case shopping
     case entertainment
@@ -24,6 +25,7 @@ enum Category: String, CaseIterable, Codable, AppEnum {
     var displayName: String {
         switch self {
         case .food: return "Food"
+        case .eatingOut: return "Eating Out"
         case .rent: return "Rent"
         case .shopping: return "Shopping"
         case .entertainment: return "Entertainment"
@@ -40,6 +42,7 @@ enum Category: String, CaseIterable, Codable, AppEnum {
 
     static var caseDisplayRepresentations: [Self: DisplayRepresentation] = [
         .food: "Food",
+        .eatingOut: "Eating Out",
         .rent: "Rent",
         .shopping: "Shopping",
         .entertainment: "Entertainment",
@@ -57,6 +60,8 @@ extension Category {
         switch self {
         case .food:
             return .green
+        case .eatingOut:
+            return .mint
         case .rent:
             return .purple
         case .shopping:

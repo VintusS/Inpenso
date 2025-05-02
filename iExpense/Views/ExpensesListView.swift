@@ -148,7 +148,6 @@ struct ExpensesListView: View {
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color(.secondarySystemBackground))
                         .cornerRadius(12)
                         .padding(.horizontal)
                         .tag(index)
