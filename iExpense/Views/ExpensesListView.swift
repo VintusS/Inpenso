@@ -49,7 +49,7 @@ struct ExpensesListView: View {
 
                                 Spacer()
 
-                                Text(expense.price, format: .currency(code: currentCurrencyCode()))
+                                Text(expense.price, format: .currency(code: SettingsViewModel.getAppCurrency()))
                                     .font(.headline)
                                     .foregroundColor(.primary)
                             }
@@ -252,8 +252,6 @@ struct ExpensesListView: View {
         recentlyDeletedExpenses.removeAll()
         showUndoSnackbar = false
     }
-
-
 }
 
 #Preview {

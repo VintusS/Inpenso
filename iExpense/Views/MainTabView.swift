@@ -10,6 +10,8 @@ import SwiftUI
 struct MainTabView: View {
     @StateObject private var viewModel = ExpenseViewModel()
     @StateObject private var analyticsViewModel = AnalyticsViewModel(expenses: [])
+    @StateObject private var settingsViewModel = SettingsViewModel()
+    @State private var colorScheme: ColorScheme?
 
     var body: some View {
         NavigationView {
@@ -35,12 +37,21 @@ struct MainTabView: View {
                     }
             }
         }
+        .preferredColorScheme(colorScheme)
         .onAppear {
             analyticsViewModel.updateExpenses(viewModel.expenses)
+            updateColorScheme()
         }
         .onChange(of: viewModel.expenses) { newExpenses in
             analyticsViewModel.updateExpenses(newExpenses)
         }
+        .onChange(of: settingsViewModel.selectedTheme) { _ in
+            updateColorScheme()
+        }
+    }
+    
+    private func updateColorScheme() {
+        colorScheme = settingsViewModel.selectedTheme.colorScheme
     }
 }
 

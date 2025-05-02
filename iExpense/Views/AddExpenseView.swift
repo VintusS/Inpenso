@@ -10,10 +10,18 @@ import SwiftUI
 struct AddExpenseView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject var viewModel: ExpenseViewModel
+    @StateObject private var settingsViewModel = SettingsViewModel()
 
     @State private var title: String = ""
     @State private var price: String = ""
-    @State private var selectedCategory: Category = .food
+    @State private var selectedCategory: Category
+
+    init(viewModel: ExpenseViewModel) {
+        self.viewModel = viewModel
+        // Initialize with the default category from settings
+        let defaultCategory = UserDefaults.standard.string(forKey: "defaultCategory") ?? Category.food.rawValue
+        _selectedCategory = State(initialValue: Category(rawValue: defaultCategory) ?? .food)
+    }
 
     var body: some View {
         NavigationView {

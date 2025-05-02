@@ -62,7 +62,7 @@ struct iExpenseWidgetEntryView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
 
-            Text(entry.totalSpent, format: .currency(code: currentCurrencyCode()))
+            Text(entry.totalSpent, format: .currency(code: UserDefaults.standard.string(forKey: "selectedCurrency") ?? "USD"))
                 .font(.title2)
                 .fontWeight(.bold)
 
@@ -73,7 +73,7 @@ struct iExpenseWidgetEntryView: View {
                         Text(category.displayName)
                             .font(.caption)
                         Spacer()
-                        Text(amount, format: .currency(code: currentCurrencyCode()))
+                        Text(amount, format: .currency(code: UserDefaults.standard.string(forKey: "selectedCurrency") ?? "USD"))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
