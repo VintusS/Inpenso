@@ -56,8 +56,6 @@ class SettingsViewModel: ObservableObject {
             let sharedDefaults = UserDefaults(suiteName: StorageService.appGroupID)
             sharedDefaults?.set(selectedCurrency, forKey: "selectedCurrency")
             sharedDefaults?.synchronize() // Force immediate write
-            
-            print("Currency updated to: \(selectedCurrency), saved to shared defaults: \(StorageService.appGroupID)")
         }
     }
     
@@ -82,17 +80,14 @@ class SettingsViewModel: ObservableObject {
         // Load currency setting - try shared first, then standard 
         if let savedCurrency = sharedDefaults?.string(forKey: "selectedCurrency") {
             self.selectedCurrency = savedCurrency
-            print("SettingsViewModel loaded currency from shared defaults: \(savedCurrency)")
         } else if let savedCurrency = UserDefaults.standard.string(forKey: "selectedCurrency") {
             self.selectedCurrency = savedCurrency
-            print("SettingsViewModel loaded currency from standard defaults: \(savedCurrency)")
             
             // Sync this value to shared defaults
             sharedDefaults?.set(savedCurrency, forKey: "selectedCurrency")
             sharedDefaults?.synchronize()
         } else {
             self.selectedCurrency = "USD"
-            print("SettingsViewModel using default currency: USD")
             
             // Set default in both places
             UserDefaults.standard.set("USD", forKey: "selectedCurrency")
@@ -131,7 +126,6 @@ class SettingsViewModel: ObservableObject {
             try jsonData.write(to: fileURL)
             return fileURL
         } catch {
-            print("Error exporting data: \(error)")
             return nil
         }
     }
@@ -145,7 +139,6 @@ class SettingsViewModel: ObservableObject {
             StorageService.saveExpenses(expenses)
             return true
         } catch {
-            print("Error importing data: \(error)")
             return false
         }
     }

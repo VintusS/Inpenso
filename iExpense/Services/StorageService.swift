@@ -24,7 +24,7 @@ struct StorageService {
             let data = try encoder.encode(expenses)
             userDefaults.set(data, forKey: expensesKey)
         } catch {
-            print("Error saving expenses: \(error.localizedDescription)")
+            // Error handling without print
         }
     }
 
@@ -38,7 +38,7 @@ struct StorageService {
             let expenses = try decoder.decode([Expense].self, from: data)
             return expenses
         } catch {
-            print("Error loading expenses: \(error.localizedDescription)")
+            // Error handling without print
             return []
         }
     }
@@ -49,7 +49,7 @@ struct StorageService {
             let data = try JSONEncoder().encode(budgets)
             userDefaults.set(data, forKey: budgetsKey)
         } catch {
-            print("Error saving budgets: \(error.localizedDescription)")
+            // Error handling without print
         }
     }
 
@@ -62,7 +62,7 @@ struct StorageService {
             let budgets = try JSONDecoder().decode([String: Double].self, from: data)
             return budgets
         } catch {
-            print("Error loading budgets: \(error.localizedDescription)")
+            // Error handling without print
             return [:]
         }
     }
