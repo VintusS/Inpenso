@@ -1309,14 +1309,18 @@ struct AnalyticsView: View {
                             RuleMark(y: .value("Budget", 100))
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [5, 5]))
                                 .foregroundStyle(Color.gray)
-                                .annotation(position: .trailing, alignment: .leading, spacing: 4) {
+                                .annotation(position: .top, alignment: .trailing, spacing: 0) {
                                     Text("Budget")
                                         .font(.caption2)
                                         .foregroundColor(.gray)
-                                        .padding(.trailing, 8)
+                                        .padding(4)
+                                        .background(Color(.tertiarySystemBackground))
+                                        .cornerRadius(4)
+                                        .offset(x: -20)
                                 }
                         }
                         .frame(height: 200)
+                        .padding(.trailing, 30) // Add padding to make room for label
                         .chartYAxis {
                             AxisMarks(position: .leading) { _ in
                                 AxisValueLabel(format: Decimal.FormatStyle.Percent.percent)

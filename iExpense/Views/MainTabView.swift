@@ -12,35 +12,45 @@ struct MainTabView: View {
     @StateObject private var analyticsViewModel = AnalyticsViewModel(expenses: [])
     @StateObject private var settingsViewModel = SettingsViewModel()
     @State private var colorScheme: ColorScheme?
+    @State private var selectedTab = 0
 
     var body: some View {
         NavigationView {
-            TabView {
+            TabView(selection: $selectedTab) {
                 HomeView(viewModel: viewModel, analyticsViewModel: analyticsViewModel)
                     .tabItem {
                         Label("Home", systemImage: "house.fill")
                     }
+                    .tag(0)
 
                 AnalyticsView(analyticsViewModel: analyticsViewModel)
                     .tabItem {
                         Label("Analytics", systemImage: "chart.pie.fill")
                     }
+                    .tag(1)
 
                 ExpensesListView(viewModel: viewModel)
                     .tabItem {
                         Label("Expenses", systemImage: "list.bullet.rectangle.portrait.fill")
                     }
+                    .tag(2)
 
                 SettingsView()
                     .tabItem {
                         Label("Settings", systemImage: "gearshape.fill")
                     }
+                    .tag(3)
             }
         }
         .preferredColorScheme(colorScheme)
         .onAppear {
             analyticsViewModel.updateExpenses(viewModel.expenses)
             updateColorScheme()
+            
+            // Register for the notification to switch tabs
+            NotificationCenter.default.addObserver(forName: NSNotification.Name("SwitchToExpensesTab"), object: nil, queue: .main) { _ in
+                selectedTab = 2 // Switch to Expenses tab
+            }
         }
         .onChange(of: viewModel.expenses) { newExpenses in
             analyticsViewModel.updateExpenses(newExpenses)
