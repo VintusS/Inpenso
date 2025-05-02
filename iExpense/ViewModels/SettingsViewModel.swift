@@ -49,7 +49,15 @@ let availableCurrencies: [(code: String, symbol: String, name: String)] = [
 class SettingsViewModel: ObservableObject {
     @Published var selectedCurrency: String {
         didSet {
+            // Save to standard UserDefaults
             UserDefaults.standard.set(selectedCurrency, forKey: "selectedCurrency")
+            
+            // Also save to shared app group UserDefaults for widget access
+            let sharedDefaults = UserDefaults(suiteName: StorageService.appGroupID)
+            sharedDefaults?.set(selectedCurrency, forKey: "selectedCurrency")
+            sharedDefaults?.synchronize() // Force immediate write
+            
+            print("Currency updated to: \(selectedCurrency), saved to shared defaults: \(StorageService.appGroupID)")
         }
     }
     
@@ -68,13 +76,31 @@ class SettingsViewModel: ObservableObject {
     @Published var exportFileName: String = "iExpense_export_\(Date().formatted(.dateTime.year().month().day()))"
     
     init() {
-        // Load saved settings or use defaults
-        if let savedCurrency = UserDefaults.standard.string(forKey: "selectedCurrency") {
+        // Get the shared UserDefaults for settings
+        let sharedDefaults = UserDefaults(suiteName: StorageService.appGroupID)
+        
+        // Load currency setting - try shared first, then standard 
+        if let savedCurrency = sharedDefaults?.string(forKey: "selectedCurrency") {
             self.selectedCurrency = savedCurrency
+            print("SettingsViewModel loaded currency from shared defaults: \(savedCurrency)")
+        } else if let savedCurrency = UserDefaults.standard.string(forKey: "selectedCurrency") {
+            self.selectedCurrency = savedCurrency
+            print("SettingsViewModel loaded currency from standard defaults: \(savedCurrency)")
+            
+            // Sync this value to shared defaults
+            sharedDefaults?.set(savedCurrency, forKey: "selectedCurrency")
+            sharedDefaults?.synchronize()
         } else {
             self.selectedCurrency = "USD"
+            print("SettingsViewModel using default currency: USD")
+            
+            // Set default in both places
+            UserDefaults.standard.set("USD", forKey: "selectedCurrency")
+            sharedDefaults?.set("USD", forKey: "selectedCurrency")
+            sharedDefaults?.synchronize()
         }
         
+        // Load other settings from standard UserDefaults
         if let savedCategoryString = UserDefaults.standard.string(forKey: "defaultCategory"),
            let savedCategory = Category(rawValue: savedCategoryString) {
             self.defaultCategory = savedCategory
@@ -131,6 +157,19 @@ class SettingsViewModel: ObservableObject {
     
     // Static method to get app-wide settings without needing to initialize
     static func getAppCurrency() -> String {
+        // First try to get from shared defaults
+        let sharedDefaults = UserDefaults(suiteName: StorageService.appGroupID)
+        
+        if let sharedDefaults = sharedDefaults {
+            // Force sync to make sure we have latest data
+            sharedDefaults.synchronize()
+            
+            if let currency = sharedDefaults.string(forKey: "selectedCurrency") {
+                return currency
+            }
+        }
+        
+        // Fall back to standard defaults
         return UserDefaults.standard.string(forKey: "selectedCurrency") ?? "USD"
     }
 }

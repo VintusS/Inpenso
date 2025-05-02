@@ -7,5 +7,7 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
+	<key>AppGroupIdentifier</key>
+	<string>group.com.vintuss.iexpense</string>
 </dict>
 </plist>

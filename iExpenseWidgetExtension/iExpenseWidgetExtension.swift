@@ -6,6 +6,82 @@ import SwiftUI
 import AppIntents
 import Foundation
 
+// Global app group ID for consistency - must match StorageService.appGroupID
+let appGroupID = "group.com.vintuss.iexpense"
+
+// Diagnostic function to test read/write in widget
+func testWidgetSharedDefaults() {
+    print("===== WIDGET SHARED DEFAULTS DIAGNOSTIC TEST =====")
+    
+    let testValue = "USD_TEST_\(Int(Date().timeIntervalSince1970))"
+    let testKey = "widgetTest"
+    
+    // Try to write a value
+    if let sharedDefaults = UserDefaults(suiteName: appGroupID) {
+        print("Widget can access shared defaults with ID: \(appGroupID)")
+        sharedDefaults.set(testValue, forKey: testKey)
+        sharedDefaults.synchronize()
+        
+        // Try to read it back
+        let readValue = sharedDefaults.string(forKey: testKey)
+        print("Widget test write+read: expected=\(testValue), actual=\(readValue ?? "nil")")
+        
+        // Try to read currency
+        let currency = sharedDefaults.string(forKey: "selectedCurrency")
+        print("Widget reading currency: \(currency ?? "nil")")
+    } else {
+        print("CRITICAL ERROR: Widget cannot access shared defaults!")
+    }
+    
+    print("=================================================")
+}
+
+// Global function to get currency code from shared UserDefaults
+func getAppCurrency() -> String {
+    // Run diagnostics
+    testWidgetSharedDefaults()
+    
+    // First try to get from shared defaults with explicit initialization
+    let sharedDefaults = UserDefaults(suiteName: appGroupID)
+    print("Widget using app group ID: \(appGroupID)")
+    
+    // Log current process and bundle information for debugging
+    let processInfo = ProcessInfo.processInfo
+    print("Widget process name: \(processInfo.processName)")
+    print("Widget bundle ID: \(Bundle.main.bundleIdentifier ?? "unknown")")
+    
+    var currency: String? = nil
+    
+    if let sharedDefaults = sharedDefaults {
+        // Force a synchronize before reading
+        sharedDefaults.synchronize()
+        
+        // List all available keys for debugging
+        let allKeys = sharedDefaults.dictionaryRepresentation().keys
+        print("Available keys in shared defaults: \(allKeys)")
+        
+        // Try to read the currency directly
+        currency = sharedDefaults.string(forKey: "selectedCurrency")
+        print("Widget reading currency from shared defaults: \(currency ?? "nil")")
+        
+        // If found, return it
+        if let currency = currency {
+            return currency
+        }
+    } else {
+        print("ERROR: Could not access shared UserDefaults with app group ID: \(appGroupID)")
+    }
+    
+    // If we got here, try standard UserDefaults
+    let standardDefaults = UserDefaults.standard
+    standardDefaults.synchronize()
+    let standardCurrency = standardDefaults.string(forKey: "selectedCurrency")
+    print("Widget fallback to standard defaults: \(standardCurrency ?? "nil")")
+    
+    // If all else fails, return USD
+    return standardCurrency ?? "USD"
+}
+
 struct ExpenseEntry: TimelineEntry {
     let date: Date
     let totalSpent: Double
@@ -14,6 +90,9 @@ struct ExpenseEntry: TimelineEntry {
 
 struct ExpenseQuickAddProvider: AppIntentTimelineProvider {
     typealias Intent = QuickAddConfigurationIntent
+    
+    // Use the shared app group
+    private let sharedDefaults = UserDefaults(suiteName: appGroupID)
 
     func placeholder(in context: Context) -> ExpenseEntry {
         ExpenseEntry(date: Date(), totalSpent: 0, spendingByCategory: [:])
@@ -62,7 +141,7 @@ struct iExpenseWidgetEntryView: View {
                 .font(.headline)
                 .foregroundColor(.secondary)
 
-            Text(entry.totalSpent, format: .currency(code: UserDefaults.standard.string(forKey: "selectedCurrency") ?? "USD"))
+            Text(entry.totalSpent, format: .currency(code: getAppCurrency()))
                 .font(.title2)
                 .fontWeight(.bold)
 
@@ -73,7 +152,7 @@ struct iExpenseWidgetEntryView: View {
                         Text(category.displayName)
                             .font(.caption)
                         Spacer()
-                        Text(amount, format: .currency(code: UserDefaults.standard.string(forKey: "selectedCurrency") ?? "USD"))
+                        Text(amount, format: .currency(code: getAppCurrency()))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -93,6 +172,9 @@ struct iExpenseWidgetExtension: Widget {
             iExpenseWidgetEntryView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .configurationDisplayName("iExpense")
+        .description("Track your current month's spending at a glance.")
     }
 }
 
