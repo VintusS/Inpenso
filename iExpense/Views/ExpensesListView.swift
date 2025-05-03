@@ -151,12 +151,16 @@ struct ExpensesListView: View {
                                     }
                                 } header: {
                                     HStack {
-                                        Image(systemName: categoryIcon(for: category))
-                                            .foregroundColor(.white)
-                                            .font(.caption)
-                                            .padding(6)
-                                            .background(category.color)
-                                            .cornerRadius(8)
+                                        // Fixed-width icon container
+                                        ZStack {
+                                            Circle()
+                                                .fill(category.color)
+                                                .frame(width: 28, height: 28)
+                                            
+                                            Image(systemName: categoryIcon(for: category))
+                                                .foregroundColor(.white)
+                                                .font(.caption)
+                                        }
                                         
                                         Text(category.displayName)
                                             .font(.headline)
@@ -666,11 +670,16 @@ struct FilterCategoriesView: View {
                     Section {
                         ForEach(Category.allCases, id: \.self) { category in
                             HStack {
-                                Image(systemName: categoryIcon(for: category))
-                                    .foregroundColor(.white)
-                                    .padding(6)
-                                    .background(category.color)
-                                    .cornerRadius(6)
+                                // Fixed-width icon container
+                                ZStack {
+                                    Circle()
+                                        .fill(category.color)
+                                        .frame(width: 28, height: 28)
+                                    
+                                    Image(systemName: categoryIcon(for: category))
+                                        .foregroundColor(.white)
+                                        .font(.caption)
+                                }
                                 
                                 Text(category.displayName)
                                     .font(.body)
