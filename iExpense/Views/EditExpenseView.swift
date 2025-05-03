@@ -15,6 +15,7 @@ struct EditExpenseView: View {
     @State private var price: String
     @State private var selectedDate: Date
     @State private var selectedCategory: Category
+    @State private var showDatePicker: Bool = false
     let expense: Expense
 
     init(viewModel: ExpenseViewModel, expense: Expense) {
@@ -26,61 +27,95 @@ struct EditExpenseView: View {
         _selectedCategory = State(initialValue: expense.category)
     }
 
+    // Current currency symbol
+    private var currencySymbol: String {
+        let locale = Locale.current
+        let currencyCode = SettingsViewModel.getAppCurrency()
+        return locale.localizedCurrencySymbol(forCurrencyCode: currencyCode) ?? currencyCode
+    }
+
     var body: some View {
         NavigationView {
-            Form {
-                Section(header: Text("Edit Expense")) {
-                    TextField("Title", text: $title)
-
-                    TextField("Price", text: $price)
-                        .keyboardType(.decimalPad)
-                        
-                    DatePicker("Date", selection: $selectedDate, displayedComponents: .date)
-                }
+            ZStack {
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
                 
-                Section {
-                    Text("Category")
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                        .listRowSeparator(.hidden)
-                    
-                    LazyVGrid(columns: [
-                        GridItem(.flexible()),
-                        GridItem(.flexible()),
-                        GridItem(.flexible())
-                    ], spacing: 15) {
-                        ForEach(Category.allCases, id: \.self) { category in
-                            CategoryButton(
-                                category: category,
-                                isSelected: selectedCategory == category,
-                                action: {
-                                    selectedCategory = category
-                                    triggerHaptic()
-                                }
-                            )
+                ScrollView {
+                    VStack(spacing: 20) {
+                        // Title and price card
+                        CardView(title: "Expense Details", showDivider: true) {
+                            VStack(spacing: 16) {
+                                TextFormField(
+                                    label: "Title",
+                                    text: $title,
+                                    placeholder: "Expense title"
+                                )
+                                .padding(.horizontal)
+                                
+                                CurrencyFormField(
+                                    label: "Amount",
+                                    amount: $price,
+                                    currencySymbol: currencySymbol
+                                )
+                                .padding(.horizontal)
+                                .padding(.bottom, 8)
+                            }
                         }
+                        
+                        // Date picker
+                        DatePickerCard(
+                            title: "Date",
+                            selectedDate: $selectedDate,
+                            isExpanded: $showDatePicker
+                        )
+                        
+                        // Category selection
+                        CardView(title: "Category") {
+                            CategoryGrid(selectedCategory: $selectedCategory)
+                                .padding(.horizontal)
+                        }
+                        
+                        // Action buttons
+                        VStack(spacing: 12) {
+                            Button(action: {
+                                saveChanges()
+                                HapticFeedback.success()
+                                dismiss()
+                            }) {
+                                HStack {
+                                    Image(systemName: "checkmark.circle.fill")
+                                    Text("Save Changes")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.accentColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                            
+                            Button(action: {
+                                deleteExpense()
+                                HapticFeedback.impact(style: .medium)
+                                dismiss()
+                            }) {
+                                HStack {
+                                    Image(systemName: "trash.fill")
+                                    Text("Delete Expense")
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.red.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
+                            }
+                        }
+                        .padding(.top, 10)
                     }
-                    .padding(.vertical, 5)
-                }
-
-                Section {
-                    Button(action: {
-                        saveChanges()
-                        dismiss()
-                    }) {
-                        Label("Save Changes", systemImage: "checkmark.circle.fill")
-                            .foregroundColor(.blue)
-                    }
-
-                    Button(role: .destructive) {
-                        deleteExpense()
-                        dismiss()
-                    } label: {
-                        Label("Delete Expense", systemImage: "trash.fill")
-                    }
+                    .padding()
                 }
             }
             .navigationTitle("Edit Expense")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") {
@@ -108,11 +143,6 @@ struct EditExpenseView: View {
             viewModel.expenses.remove(at: index)
             viewModel.saveExpenses()
         }
-    }
-    
-    private func triggerHaptic() {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
     }
 }
 

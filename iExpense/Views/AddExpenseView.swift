@@ -52,10 +52,17 @@ struct AddExpenseView: View {
                         mainDataCard
                         
                         // Category selection
-                        categoryCard
+                        CardView(title: "Category") {
+                            CategoryGrid(selectedCategory: $selectedCategory)
+                                .padding(.horizontal)
+                        }
                         
                         // Date selection
-                        dateCard
+                        DatePickerCard(
+                            title: "Date",
+                            selectedDate: $selectedDate,
+                            isExpanded: $showDatePicker
+                        )
                         
                         // Notes
                         notesCard
@@ -98,173 +105,34 @@ struct AddExpenseView: View {
     // MARK: - Main Data Card
     
     private var mainDataCard: some View {
-        VStack(spacing: 0) {
-            // Title field
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Title")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                TextField("Expense title", text: $title)
-                    .font(.headline)
-                    .padding(.vertical, 10)
-                    .padding(.horizontal, 15)
-                    .background(Color(.tertiarySystemBackground))
-                    .cornerRadius(10)
-            }
-            .padding(.horizontal)
-            .padding(.top, 16)
-            .padding(.bottom, 12)
-            
-            Divider()
+        CardView(title: "Expense Details", showDivider: true) {
+            VStack(spacing: 16) {
+                // Title field
+                TextFormField(
+                    label: "Title",
+                    text: $title,
+                    placeholder: "Expense title",
+                    leadingIcon: "pencil"
+                )
                 .padding(.horizontal)
-            
-            // Price field
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Amount")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
                 
-                HStack(alignment: .center) {
-                    Text(currencySymbol)
-                        .foregroundColor(.secondary)
-                        .font(.title3)
-                        .fontWeight(.medium)
-                    
-                    TextField("0.00", text: $price)
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                        .keyboardType(.decimalPad)
-                        .multilineTextAlignment(.leading)
-                        .onChange(of: price) { newValue in
-                            price = formatPriceInput(newValue)
-                        }
-                    
-                    Spacer()
-                    
-                    // Clear button
-                    if !price.isEmpty {
-                        Button(action: {
-                            price = ""
-                        }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 15)
-                .background(Color(.tertiarySystemBackground))
-                .cornerRadius(10)
-            }
-            .padding(.horizontal)
-            .padding(.vertical, 16)
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground))
-        )
-    }
-    
-    // MARK: - Category Card
-    
-    private var categoryCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Category")
-                .font(.headline)
+                // Price field
+                CurrencyFormField(
+                    label: "Amount",
+                    amount: $price,
+                    currencySymbol: currencySymbol,
+                    clearAction: { price = "" }
+                )
                 .padding(.horizontal)
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: 15) {
-                ForEach(Category.allCases, id: \.self) { category in
-                    CategoryButton(
-                        category: category,
-                        isSelected: selectedCategory == category,
-                        action: {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                selectedCategory = category
-                            }
-                            triggerHaptic()
-                        }
-                    )
-                }
+                .padding(.bottom, 8)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 10)
         }
-        .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground))
-        )
-    }
-    
-    // MARK: - Date Card
-    
-    private var dateCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Date")
-                .font(.headline)
-                .padding(.horizontal)
-            
-            VStack {
-                // Date display
-                Button(action: {
-                    withAnimation {
-                        showDatePicker.toggle()
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "calendar")
-                            .foregroundColor(.accentColor)
-                        
-                        Text(formattedDate())
-                            .font(.headline)
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.down")
-                            .foregroundColor(.secondary)
-                            .rotationEffect(Angle(degrees: showDatePicker ? 180 : 0))
-                    }
-                    .padding()
-                    .background(Color(.tertiarySystemBackground))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-                }
-                
-                // Expandable date picker
-                if showDatePicker {
-                    DatePicker("", selection: $selectedDate, in: ...Date(), displayedComponents: .date)
-                        .datePickerStyle(GraphicalDatePickerStyle())
-                        .labelsHidden()
-                        .padding(.horizontal)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                        .onChange(of: selectedDate) { _ in
-                            triggerHaptic()
-                        }
-                }
-            }
-            .padding(.bottom, 12)
-        }
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground))
-        )
     }
     
     // MARK: - Notes Card
     
     private var notesCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Notes (Optional)")
-                .font(.headline)
-                .padding(.horizontal)
-            
+        CardView(title: "Notes (Optional)") {
             TextEditor(text: $notes)
                 .font(.body)
                 .padding(10)
@@ -272,13 +140,8 @@ struct AddExpenseView: View {
                 .background(Color(.tertiarySystemBackground))
                 .cornerRadius(10)
                 .padding(.horizontal)
-                .padding(.bottom, 12)
+                .padding(.bottom, 8)
         }
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground))
-        )
     }
     
     // MARK: - Save Button
@@ -334,36 +197,6 @@ struct AddExpenseView: View {
         return !title.isEmpty && !price.isEmpty
     }
     
-    private func formattedDate() -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        return formatter.string(from: selectedDate)
-    }
-    
-    private func formatPriceInput(_ input: String) -> String {
-        // Remove any non-numeric characters except for a single decimal point
-        var formattedInput = input.replacingOccurrences(of: ",", with: ".")
-        
-        // Allow only one decimal point
-        let components = formattedInput.components(separatedBy: ".")
-        if components.count > 2 {
-            formattedInput = components[0] + "." + components[1]
-        }
-        
-        // Limit to two decimal places
-        if let decimalIndex = formattedInput.firstIndex(of: ".") {
-            let decimalPosition = formattedInput.distance(from: formattedInput.startIndex, to: decimalIndex)
-            let maxLength = decimalPosition + 3 // Allow up to 2 decimal places
-            
-            if formattedInput.count > maxLength {
-                let endIndex = formattedInput.index(formattedInput.startIndex, offsetBy: maxLength)
-                formattedInput = String(formattedInput[..<endIndex])
-            }
-        }
-        
-        return formattedInput
-    }
-    
     private func saveExpense() {
         // Validate inputs
         if title.isEmpty {
@@ -394,6 +227,9 @@ struct AddExpenseView: View {
             category: selectedCategory
         )
         
+        // Trigger success haptic
+        HapticFeedback.success()
+        
         // Wait for animation, then dismiss
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             dismiss()
@@ -403,11 +239,7 @@ struct AddExpenseView: View {
     private func showValidationAlert(_ message: String) {
         validationMessage = message
         showingValidationAlert = true
-    }
-    
-    private func triggerHaptic() {
-        let generator = UIImpactFeedbackGenerator(style: .light)
-        generator.impactOccurred()
+        HapticFeedback.error()
     }
     
     private func setupKeyboardObservers() {
@@ -425,83 +257,6 @@ struct AddExpenseView: View {
     private func removeKeyboardObservers() {
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
         NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
-    }
-}
-
-// MARK: - Category Button
-
-struct CategoryButton: View {
-    let category: Category
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 6) {
-                // Icon with circle background
-                ZStack {
-                    // Base shape
-                    Circle()
-                        .fill(category.color)
-                        .frame(width: 56, height: 56)
-                    
-                    // Icon
-                    Image(systemName: categoryIcon(for: category))
-                        .font(.system(size: 22))
-                        .foregroundColor(.white)
-                    
-                    // Selection indicator
-                    if isSelected {
-                        Circle()
-                            .stroke(Color.white, lineWidth: 3)
-                            .frame(width: 56, height: 56)
-                    }
-                }
-                .shadow(color: isSelected ? category.color.opacity(0.6) : Color.clear, radius: isSelected ? 5 : 0)
-                
-                // Category name in fixed-height container
-                Text(category.displayName)
-                    .font(.caption)
-                    .fontWeight(isSelected ? .bold : .medium)
-                    .foregroundColor(isSelected ? .primary : .secondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .lineLimit(2)
-                    .frame(height: 32)
-                    .minimumScaleFactor(0.8)
-            }
-            .frame(width: 80)
-            .scaleEffect(isSelected ? 1.05 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-    
-    private func categoryIcon(for category: Category) -> String {
-        switch category {
-        case .food:
-            return "cart.fill"
-        case .eatingOut:
-            return "fork.knife"
-        case .rent:
-            return "house.fill"
-        case .shopping:
-            return "bag.fill"
-        case .entertainment:
-            return "tv.fill"
-        case .transportation:
-            return "car.fill"
-        case .utilities:
-            return "bolt.fill"
-        case .subscriptions:
-            return "repeat"
-        case .healthcare:
-            return "heart.fill"
-        case .education:
-            return "book.fill"
-        case .others:
-            return "ellipsis"
-        }
     }
 }
 
