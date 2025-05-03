@@ -174,33 +174,26 @@ struct AddExpenseView: View {
                 .font(.headline)
                 .padding(.horizontal)
             
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 15) {
-                    // Add leading spacer to prevent items from being cut off
-                    Spacer()
-                        .frame(width: 5)
-                    
-                    ForEach(Category.allCases, id: \.self) { category in
-                        CategoryButton(
-                            category: category,
-                            isSelected: selectedCategory == category,
-                            action: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    selectedCategory = category
-                                }
-                                triggerHaptic()
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 15) {
+                ForEach(Category.allCases, id: \.self) { category in
+                    CategoryButton(
+                        category: category,
+                        isSelected: selectedCategory == category,
+                        action: {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                selectedCategory = category
                             }
-                        )
-                    }
-                    
-                    // Add trailing spacer to prevent items from being cut off
-                    Spacer()
-                        .frame(width: 5)
+                            triggerHaptic()
+                        }
+                    )
                 }
-                .padding(.horizontal)
-                .padding(.vertical, 5)
             }
-            .padding(.bottom, 4)
+            .padding(.horizontal)
+            .padding(.vertical, 10)
         }
         .padding(.vertical, 12)
         .background(
@@ -444,37 +437,40 @@ struct CategoryButton: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(spacing: 8) {
+            VStack(spacing: 6) {
+                // Icon with circle background
                 ZStack {
                     // Base shape
                     Circle()
                         .fill(category.color)
-                        .frame(width: 60, height: 60)
+                        .frame(width: 56, height: 56)
                     
                     // Icon
                     Image(systemName: categoryIcon(for: category))
-                        .font(.system(size: 24))
+                        .font(.system(size: 22))
                         .foregroundColor(.white)
                     
                     // Selection indicator
                     if isSelected {
                         Circle()
                             .stroke(Color.white, lineWidth: 3)
-                            .frame(width: 60, height: 60)
+                            .frame(width: 56, height: 56)
                     }
                 }
                 .shadow(color: isSelected ? category.color.opacity(0.6) : Color.clear, radius: isSelected ? 5 : 0)
                 
-                // Category name
+                // Category name in fixed-height container
                 Text(category.displayName)
                     .font(.caption)
                     .fontWeight(isSelected ? .bold : .medium)
                     .foregroundColor(isSelected ? .primary : .secondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .lineLimit(2)
-                    .frame(width: 75, height: 30)
+                    .frame(height: 32)
+                    .minimumScaleFactor(0.8)
             }
-            .frame(width: 75, height: 105)
+            .frame(width: 80)
             .scaleEffect(isSelected ? 1.05 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
         }
