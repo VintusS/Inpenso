@@ -14,10 +14,10 @@ struct DatePickerCard: View {
                 .font(.headline)
                 .padding(.horizontal)
             
-            VStack {
+            VStack(spacing: 0) {
                 // Date display button
                 Button(action: {
-                    withAnimation {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         isExpanded.toggle()
                     }
                 }) {
@@ -40,28 +40,36 @@ struct DatePickerCard: View {
                     .padding(.horizontal)
                 }
                 
-                // Expandable date picker
-                if isExpanded {
-                    if let range = dateRange {
-                        DatePicker("", selection: $selectedDate, in: range, displayedComponents: .date)
-                            .datePickerStyle(GraphicalDatePickerStyle())
-                            .labelsHidden()
-                            .padding(.horizontal)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                            .onChange(of: selectedDate) { _ in
-                                HapticFeedback.selection()
-                            }
-                    } else {
-                        DatePicker("", selection: $selectedDate, in: ...maxDate, displayedComponents: .date)
-                            .datePickerStyle(GraphicalDatePickerStyle())
-                            .labelsHidden()
-                            .padding(.horizontal)
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                            .onChange(of: selectedDate) { _ in
-                                HapticFeedback.selection()
-                            }
+                // Reserved space for date picker with clipping
+                ZStack(alignment: .top) {
+                    // Empty container for space
+                    Color.clear
+                        .frame(height: isExpanded ? (UIDevice.current.userInterfaceIdiom == .pad ? 400 : 300) : 0)
+                    
+                    // Date picker
+                    Group {
+                        if let range = dateRange {
+                            DatePicker("", selection: $selectedDate, in: range, displayedComponents: .date)
+                                .datePickerStyle(GraphicalDatePickerStyle())
+                                .labelsHidden()
+                                .padding(.horizontal)
+                                .onChange(of: selectedDate) { _ in
+                                    HapticFeedback.selection()
+                                }
+                        } else {
+                            DatePicker("", selection: $selectedDate, in: ...maxDate, displayedComponents: .date)
+                                .datePickerStyle(GraphicalDatePickerStyle())
+                                .labelsHidden()
+                                .padding(.horizontal)
+                                .onChange(of: selectedDate) { _ in
+                                    HapticFeedback.selection()
+                                }
+                        }
                     }
+                    .opacity(isExpanded ? 1 : 0)
+                    .frame(height: isExpanded ? nil : 0, alignment: .top)
                 }
+                .clipped() // Clip content when collapsing
             }
             .padding(.bottom, 12)
         }
