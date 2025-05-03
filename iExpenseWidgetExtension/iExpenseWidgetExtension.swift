@@ -178,415 +178,215 @@ struct iExpenseWidgetEntryView: View {
         }
     }
     
-    // MARK: - Small Widget
+    // MARK: - Small Widget (2x2)
     var smallWidget: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // Header with month spending
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("This Month")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+        ZStack {
+            // Background gradient for a more engaging look
+            RoundedRectangle(cornerRadius: 12)
+                .fill(
+                    LinearGradient(
+                        gradient: Gradient(
+                            colors: [
+                                Color(.systemBackground).opacity(0.8),
+                                Color(.systemBackground)
+                            ]
+                        ),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .padding(4)
+            
+            VStack(alignment: .center, spacing: 4) {
+                // "Monthly Spend" title with icon
+                HStack(spacing: 4) {
+                    Image(systemName: "dollarsign.circle.fill")
+                        .foregroundColor(entry.overBudget ? .red : .blue)
+                        .font(.system(size: 14))
                     
-                    Text(entry.totalSpent, format: .currency(code: currencyCode))
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .foregroundColor(entry.overBudget ? .red : .primary)
+                    Text("MONTHLY SPEND")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .kerning(0.5)
                 }
+                .padding(.top, 4)
                 
                 Spacer()
                 
-                // Circular progress indicator
-                ZStack {
-                    Circle()
-                        .stroke(Color(.systemGray5), lineWidth: 4)
-                        .frame(width: 40, height: 40)
-                    
-                    if entry.monthlyBudget > 0 {
-                        Circle()
-                            .trim(from: 0, to: entry.budgetProgress)
-                            .stroke(
-                                entry.overBudget ? Color.red : Color.blue,
-                                style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                            )
-                            .frame(width: 40, height: 40)
-                            .rotationEffect(.degrees(-90))
-                        
-                        Text("\(Int(entry.budgetProgress * 100))%")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundColor(entry.overBudget ? .red : .primary)
-                    } else {
-                        Image(systemName: "infinity")
-                            .font(.system(size: 14, weight: .bold))
-                    }
-                }
-            }
-            
-            if entry.monthlyBudget > 0 {
-                Divider()
+                // Amount in large, attractive font
+                Text(entry.totalSpent, format: .currency(code: currencyCode))
+                    .font(.system(.title2, design: .rounded))
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .foregroundColor(entry.overBudget ? .red : .primary)
+                    .shadow(color: Color.black.opacity(0.05), radius: 1, x: 0, y: 1)
                 
-                HStack {
-                    Text(entry.overBudget ? "Over by" : "Left")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    if entry.overBudget {
-                        Text(entry.totalSpent - entry.monthlyBudget, format: .currency(code: currencyCode))
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .fontWeight(.semibold)
-                    } else {
-                        Text(entry.budgetRemaining, format: .currency(code: currencyCode))
-                            .font(.caption)
-                            .foregroundColor(.blue)
-                            .fontWeight(.semibold)
+                // Budget indicator if budget exists
+                if entry.monthlyBudget > 0 {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(entry.overBudget ? .red : .green)
+                            .frame(width: 6, height: 6)
+                        
+                        Text(entry.overBudget ? "Over Budget" : "\(Int(entry.budgetProgress * 100))% of Budget")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(entry.overBudget ? .red : .green)
                     }
-                }
-            }
-            
-            if let topCategory = entry.topCategories.first {
-                HStack {
-                    Circle()
-                        .fill(topCategory.0.color)
-                        .frame(width: 8, height: 8)
-                    
-                    Text("Top: \(topCategory.0.displayName)")
-                        .font(.caption2)
+                    .padding(.bottom, 2)
+                } else {
+                    Text("This Month")
+                        .font(.system(size: 10))
                         .foregroundColor(.secondary)
-                    
-                    Spacer()
-                    
-                    Text(topCategory.1, format: .currency(code: currencyCode))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .padding(.bottom, 2)
                 }
+                
+                Spacer()
             }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
         }
-        .padding(12)
     }
     
     // MARK: - Medium Widget
     var mediumWidget: some View {
-        HStack {
-            // Left section - Spending & Budget
-            VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("This Month")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Text(entry.totalSpent, format: .currency(code: currencyCode))
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(entry.overBudget ? .red : .primary)
-                    }
-                    
-                    Spacer()
-                    
-                    if entry.monthlyBudget > 0 {
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("Budget")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            
-                            Text(entry.monthlyBudget, format: .currency(code: currencyCode))
-                                .font(.callout)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                }
-                
-                // Budget progress bar
-                if entry.monthlyBudget > 0 {
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color(.systemGray5))
-                                .frame(height: 8)
-                            
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(entry.overBudget ? Color.red : Color.blue)
-                                .frame(width: min(CGFloat(entry.budgetProgress) * geometry.size.width, geometry.size.width), height: 8)
-                        }
-                    }
-                    .frame(height: 8)
-                    
-                    HStack {
-                        if entry.overBudget {
-                            Text("Over by")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            
-                            Text(entry.totalSpent - entry.monthlyBudget, format: .currency(code: currencyCode))
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.red)
-                        } else {
-                            Text("\(entry.daysLeftInMonth) days left")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                            
-                            Spacer()
-                            
-                            Text(entry.budgetRemaining, format: .currency(code: currencyCode))
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.blue)
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.trailing, 8)
-            
-            // Right section - Top categories
+        HStack(spacing: 16) {
+            // Left section - Monthly spending amount
             VStack(alignment: .leading, spacing: 4) {
-                Text("Top Categories")
+                Text(entry.totalSpent, format: .currency(code: currencyCode))
+                    .font(.system(.title, design: .rounded))
+                    .fontWeight(.bold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .foregroundColor(entry.overBudget ? .red : .primary)
+                
+                Text("spent this month")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
-                if entry.topCategories.isEmpty {
-                    Text("No data")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 8)
-                } else {
-                    VStack(spacing: 6) {
-                        ForEach(entry.topCategories.prefix(3), id: \.0) { category, amount in
-                            HStack {
-                                Circle()
-                                    .fill(category.color)
-                                    .frame(width: 8, height: 8)
-                                
-                                Text(category.displayName)
-                                    .font(.caption2)
-                                    .lineLimit(1)
-                                
-                                Spacer()
-                                
-                                Text(amount, format: .currency(code: currencyCode))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                }
-                
-                Spacer()
-                
-                if entry.monthlyBudget > 0 && entry.daysLeftInMonth > 0 && !entry.overBudget {
-                    Divider()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            // Right section - Budget circle if available
+            if entry.monthlyBudget > 0 {
+                ZStack {
+                    // Background circle
+                    Circle()
+                        .stroke(Color(.systemGray5), lineWidth: 8)
+                        .frame(width: 80, height: 80)
                     
-                    HStack {
-                        Text("Daily Budget")
+                    // Progress circle
+                    Circle()
+                        .trim(from: 0, to: entry.budgetProgress)
+                        .stroke(
+                            entry.overBudget ? Color.red : Color.green,
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                        )
+                        .frame(width: 80, height: 80)
+                        .rotationEffect(.degrees(-90))
+                    
+                    // Percentage text
+                    VStack(spacing: 0) {
+                        Text("\(Int(entry.budgetProgress * 100))%")
+                            .font(.system(.body, design: .rounded))
+                            .fontWeight(.bold)
+                            .foregroundColor(entry.overBudget ? .red : .green)
+                        
+                        Text("of budget")
                             .font(.caption2)
                             .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text(entry.dailyBudgetRecommendation, format: .currency(code: currencyCode))
-                            .font(.caption)
-                            .foregroundColor(.blue)
                     }
                 }
+                .frame(width: 100, height: 100)
             }
-            .frame(maxWidth: .infinity)
         }
-        .padding(12)
+        .padding()
     }
     
     // MARK: - Large Widget
     var largeWidget: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Top section with month summary
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Month to Date")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+        VStack {
+            // Top - Monthly spending
+            Text(entry.totalSpent, format: .currency(code: currencyCode))
+                .font(.system(.largeTitle, design: .rounded))
+                .fontWeight(.bold)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .foregroundColor(entry.overBudget ? .red : .primary)
+            
+            Text("spent this month")
+                .font(.headline)
+                .foregroundColor(.secondary)
+            
+            // Budget visualization if available
+            if entry.monthlyBudget > 0 {
+                Spacer()
+                
+                ZStack {
+                    // Background circle
+                    Circle()
+                        .stroke(Color(.systemGray5), lineWidth: 15)
+                        .frame(width: 180, height: 180)
                     
-                    Text(entry.totalSpent, format: .currency(code: currencyCode))
-                        .font(.title)
-                        .fontWeight(.bold)
-                        .foregroundColor(entry.overBudget ? .red : .primary)
+                    // Progress circle
+                    Circle()
+                        .trim(from: 0, to: entry.budgetProgress)
+                        .stroke(
+                            entry.overBudget ? Color.red : Color.green,
+                            style: StrokeStyle(lineWidth: 15, lineCap: .round)
+                        )
+                        .frame(width: 180, height: 180)
+                        .rotationEffect(.degrees(-90))
+                    
+                    // Inner information
+                    VStack(spacing: 4) {
+                        Text(entry.overBudget ? "OVER BUDGET" : "BUDGET")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                        
+                        if entry.overBudget {
+                            Text(entry.totalSpent - entry.monthlyBudget, format: .currency(code: currencyCode))
+                                .font(.system(.title3, design: .rounded))
+                                .fontWeight(.bold)
+                                .foregroundColor(.red)
+                        } else {
+                            Text(entry.budgetRemaining, format: .currency(code: currencyCode))
+                                .font(.system(.title3, design: .rounded))
+                                .fontWeight(.bold)
+                                .foregroundColor(.green)
+                        }
+                        
+                        Text("\(Int(entry.budgetProgress * 100))% used")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Spacer()
                 
-                if entry.monthlyBudget > 0 {
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("Monthly Budget")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        Text(entry.monthlyBudget, format: .currency(code: currencyCode))
-                            .font(.title2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            
-            // Budget progress section
-            if entry.monthlyBudget > 0 {
-                VStack(alignment: .leading, spacing: 4) {
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(Color(.systemGray5))
-                                .frame(height: 12)
-                            
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(entry.overBudget ? Color.red : Color.blue)
-                                .frame(width: min(CGFloat(entry.budgetProgress) * geometry.size.width, geometry.size.width), height: 12)
-                        }
-                    }
-                    .frame(height: 12)
-                    
-                    HStack {
-                        if entry.overBudget {
-                            Text("Over budget")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            Text(entry.totalSpent - entry.monthlyBudget, format: .currency(code: currencyCode))
-                                .font(.headline)
-                                .foregroundColor(.red)
-                        } else {
-                            Text("Remaining")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                            
-                            Text(entry.budgetRemaining, format: .currency(code: currencyCode))
-                                .font(.headline)
-                                .foregroundColor(.blue)
-                            
-                            Text("(\(Int(entry.budgetProgress * 100))% used)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 4)
-                        }
-                        
-                        Spacer()
-                        
-                        Text("\(entry.daysLeftInMonth) days left")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                }
-            }
-            
-            Divider()
-            
-            // Category breakdown section
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Spending by Category")
-                    .font(.headline)
-                    .padding(.bottom, 2)
+                Text("\(entry.daysLeftInMonth) days left in the month")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            } else {
+                Spacer()
                 
-                if entry.spendingByCategory.isEmpty {
-                    Text("No expenses recorded this month")
-                        .font(.subheadline)
+                // If no budget, show a message
+                VStack {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 50))
                         .foregroundColor(.secondary)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical, 4)
-                } else {
-                    // Calculate max value for proportional bars
-                    let maxValue = entry.topCategories.first?.1 ?? 1
+                        .padding(.bottom, 10)
                     
-                    ForEach(Array(entry.topCategories.prefix(5)), id: \.0) { category, amount in
-                        HStack(spacing: 8) {
-                            // Category icon and name
-                            HStack(spacing: 6) {
-                                ZStack {
-                                    Circle()
-                                        .fill(category.color)
-                                        .frame(width: 24, height: 24)
-                                    
-                                    Image(systemName: categoryIcon(for: category))
-                                        .font(.system(size: 12))
-                                        .foregroundColor(.white)
-                                }
-                                
-                                Text(category.displayName)
-                                    .font(.subheadline)
-                                    .lineLimit(1)
-                            }
-                            .frame(width: 120, alignment: .leading)
-                            
-                            // Bar visualization
-                            GeometryReader { geometry in
-                                ZStack(alignment: .leading) {
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(Color(.systemGray5))
-                                        .frame(height: 8)
-                                    
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(category.color.opacity(0.8))
-                                        .frame(width: max(CGFloat(amount / maxValue) * geometry.size.width, 20), height: 8)
-                                }
-                            }
-                            .frame(height: 8)
-                            
-                            // Amount and percentage
-                            VStack(alignment: .trailing, spacing: 0) {
-                                Text(amount, format: .currency(code: currencyCode))
-                                    .font(.subheadline)
-                                
-                                if entry.totalSpent > 0 {
-                                    Text("\(Int((amount / entry.totalSpent) * 100))%")
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .frame(width: 80, alignment: .trailing)
-                        }
-                    }
+                    Text("No budget set for this month")
+                        .font(.title3)
+                        .foregroundColor(.secondary)
                 }
-            }
-            
-            Spacer()
-            
-            // Bottom recommendation section
-            if entry.monthlyBudget > 0 && entry.daysLeftInMonth > 0 {
-                Divider()
+                .padding()
                 
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.overBudget ? "You're over budget" : "Daily Budget")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        if !entry.overBudget {
-                            Text(entry.dailyBudgetRecommendation, format: .currency(code: currencyCode))
-                                .font(.headline)
-                                .foregroundColor(.blue)
-                        }
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("Month Ends")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        let calendar = Calendar.current
-                        let now = Date()
-                        if let endOfMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: calendar.startOfDay(for: now)))?.addingTimeInterval(60*60*24*31) {
-                            let endDate = calendar.date(from: calendar.dateComponents([.year, .month], from: endOfMonth))?.addingTimeInterval(-1) ?? Date()
-                            
-                            Text(endDate, style: .date)
-                                .font(.subheadline)
-                        }
-                    }
-                }
+                Spacer()
             }
         }
-        .padding(16)
+        .padding()
     }
     
     // Helper function to get category icon
