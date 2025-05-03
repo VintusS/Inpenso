@@ -16,10 +16,11 @@ class ExpenseViewModel: ObservableObject {
         loadExpenses()
     }
     
-    func addExpense(title: String, price: Double, category: Category) {
+    func addExpense(title: String, price: Double, category: Category) -> Expense {
         let newExpense = Expense(title: title, price: price, date: Date(), category: category)
         expenses.append(newExpense)
         saveExpenses()
+        return newExpense
     }
     
     func deleteExpense(at offsets: IndexSet) {

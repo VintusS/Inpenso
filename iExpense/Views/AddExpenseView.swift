@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AddExpenseView: View {
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject var viewModel: ExpenseViewModel
     @StateObject private var settingsViewModel = SettingsViewModel()
     
@@ -22,6 +23,7 @@ struct AddExpenseView: View {
     // UI States
     @State private var showDatePicker = false
     @State private var keyboardHeight: CGFloat = 0
+    @State private var keyboardVisible: Bool = false
     @State private var showingValidationAlert = false
     @State private var validationMessage = ""
     @State private var animateSuccess = false
@@ -89,6 +91,15 @@ struct AddExpenseView: View {
                         dismiss()
                     }
                 }
+                
+                // Done button only shows when keyboard is visible
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if keyboardVisible {
+                        Button("Done") {
+                            hideKeyboard()
+                        }
+                    }
+                }
             }
             .onAppear {
                 setupKeyboardObservers()
@@ -133,14 +144,22 @@ struct AddExpenseView: View {
     
     private var notesCard: some View {
         CardView(title: "Notes (Optional)") {
-            TextEditor(text: $notes)
-                .font(.body)
-                .padding(10)
-                .frame(minHeight: 100)
-                .background(Color(.tertiarySystemBackground))
-                .cornerRadius(10)
-                .padding(.horizontal)
-                .padding(.bottom, 8)
+            ZStack(alignment: .topLeading) {
+                // Background that adapts to color scheme
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(colorScheme == .dark ? Color(.systemGray6) : Color(.systemBackground))
+                    .frame(minHeight: 100)
+                
+                // Text editor
+                TextEditor(text: $notes)
+                    .font(.body)
+                    .scrollContentBackground(.hidden) // Hide the default background
+                    .background(Color.clear) // Use transparent background
+                    .padding(8)
+                    .frame(minHeight: 100)
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
         }
     }
     
@@ -198,6 +217,9 @@ struct AddExpenseView: View {
     }
     
     private func saveExpense() {
+        // Hide keyboard first
+        hideKeyboard()
+        
         // Validate inputs
         if title.isEmpty {
             showValidationAlert("Please enter a title for your expense.")
@@ -221,11 +243,20 @@ struct AddExpenseView: View {
         }
         
         // Add the expense with all fields
-        viewModel.addExpense(
+        let newExpense = viewModel.addExpense(
             title: title,
             price: priceValue,
             category: selectedCategory
         )
+        
+        // Save notes to UserDefaults using the expense ID
+        if !notes.isEmpty {
+            let notesKey = "notes_\(newExpense.id.uuidString)"
+            print("DEBUG: Saving notes for new expense: \(newExpense.id.uuidString)")
+            print("DEBUG: Notes content: \"\(notes)\"")
+            UserDefaults.standard.set(notes, forKey: notesKey)
+            UserDefaults.standard.synchronize()
+        }
         
         // Trigger success haptic
         HapticFeedback.success()
@@ -242,15 +273,25 @@ struct AddExpenseView: View {
         HapticFeedback.error()
     }
     
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    }
+    
     private func setupKeyboardObservers() {
         NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
             if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
                 self.keyboardHeight = keyboardFrame.height
+                withAnimation {
+                    self.keyboardVisible = true
+                }
             }
         }
         
         NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
             self.keyboardHeight = 0
+            withAnimation {
+                self.keyboardVisible = false
+            }
         }
     }
     
