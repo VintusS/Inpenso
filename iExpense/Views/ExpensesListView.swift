@@ -16,11 +16,10 @@ struct ExpensesListView: View {
     @State private var showUndoSnackbar: Bool = false
     @State private var undoTimer: Timer? = nil
     @State private var selectedExpenseToEdit: Expense? = nil
-    @State private var showingEditSheet: Bool = false
+    @State private var showingFilterSheet: Bool = false
     @State private var selectedSortOption: SortOption = .dateDescending
     @State private var searchText: String = ""
     @State private var showEmptyState: Bool = false
-    @State private var showingFilterSheet: Bool = false
     @State private var selectedCategories: Set<Category> = Set(Category.allCases)
     @State private var isSearchActive = false
     
@@ -112,42 +111,11 @@ struct ExpensesListView: View {
                             ForEach(visibleCategories, id: \.self) { category in
                                 Section {
                                     ForEach(groupedExpenses[category] ?? []) { expense in
-                                        ExpenseRowView(expense: expense)
-                                            .contentShape(Rectangle())
-                                            .onTapGesture {
-                                                selectedExpenseToEdit = expense
-                                                showingEditSheet = true
-                                            }
-                                            .contextMenu {
-                                                Button(action: {
-                                                    selectedExpenseToEdit = expense
-                                                    showingEditSheet = true
-                                                }) {
-                                                    Label("Edit", systemImage: "pencil")
-                                                }
-                                                
-                                                Button(role: .destructive, action: {
-                                                    deleteExpenseByID(expense)
-                                                }) {
-                                                    Label("Delete", systemImage: "trash")
-                                                }
-                                            }
-                                            .swipeActions(edge: .leading) {
-                                                Button(role: .destructive) {
-                                                    deleteExpenseByID(expense)
-                                                } label: {
-                                                    Label("Delete", systemImage: "trash")
-                                                }
-                                            }
-                                            .swipeActions(edge: .trailing) {
-                                                Button {
-                                                    selectedExpenseToEdit = expense
-                                                    showingEditSheet = true
-                                                } label: {
-                                                    Label("Edit", systemImage: "pencil")
-                                                }
-                                                .tint(.blue)
-                                            }
+                                        ExpenseRowContent(expense: expense, onEdit: { 
+                                            selectedExpenseToEdit = expense
+                                        }, onDelete: {
+                                            deleteExpenseByID(expense)
+                                        })
                                     }
                                 } header: {
                                     HStack {
@@ -217,7 +185,6 @@ struct ExpensesListView: View {
                     Button(action: {
                         let newExpense = Expense(title: "", price: 0, date: Date(), category: .food)
                         selectedExpenseToEdit = newExpense
-                        showingEditSheet = true
                     }) {
                         Image(systemName: "plus")
                     }
@@ -240,16 +207,14 @@ struct ExpensesListView: View {
             .onChange(of: viewModel.expenses) { _ in
                 analyticsViewModel.updateExpenses(viewModel.expenses)
             }
-            .sheet(isPresented: $showingEditSheet, onDismiss: {
-                selectedExpenseToEdit = nil
-            }) {
-                if let expenseToEdit = selectedExpenseToEdit {
-                    if expenseToEdit.title.isEmpty {
-                        // This is a new expense
-                        AddExpenseView(viewModel: viewModel)
-                    } else {
-                        EditExpenseView(viewModel: viewModel, expense: expenseToEdit)
-                    }
+            .sheet(item: $selectedExpenseToEdit) { expenseToEdit in
+                if expenseToEdit.title.isEmpty {
+                    // This is a new expense
+                    AddExpenseView(viewModel: viewModel)
+                } else {
+                    // Use ID parameter to force view refresh
+                    EditExpenseView(viewModel: viewModel, expense: expenseToEdit)
+                        .id(expenseToEdit.id) // Force view to refresh completely on each presentation
                 }
             }
             .sheet(isPresented: $showingFilterSheet) {
@@ -480,7 +445,6 @@ struct ExpensesListView: View {
                 Button(action: {
                     let newExpense = Expense(title: "", price: 0, date: Date(), category: .food)
                     selectedExpenseToEdit = newExpense
-                    showingEditSheet = true
                 }) {
                     Label("Add Expense", systemImage: "plus")
                         .foregroundColor(.white)
@@ -772,6 +736,50 @@ struct FilterCategoriesView: View {
         case .others:
             return "ellipsis"
         }
+    }
+}
+
+struct ExpenseRowContent: View {
+    let expense: Expense
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        ExpenseRowView(expense: expense)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                print("DEBUG: Tap gesture on expense with ID \(expense.id), title \(expense.title)")
+                onEdit()
+                print("DEBUG: Directly setting selectedExpenseToEdit")
+            }
+            .contextMenu {
+                Button(action: {
+                    onEdit()
+                }) {
+                    Label("Edit", systemImage: "pencil")
+                }
+                
+                Button(role: .destructive, action: {
+                    onDelete()
+                }) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+            .swipeActions(edge: .leading) {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+            .swipeActions(edge: .trailing) {
+                Button {
+                    onEdit()
+                } label: {
+                    Label("Edit", systemImage: "pencil")
+                }
+                .tint(.blue)
+            }
     }
 }
 

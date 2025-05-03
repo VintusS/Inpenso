@@ -20,6 +20,7 @@ struct EditExpenseView: View {
     @State private var notes: String = ""
     @State private var keyboardHeight: CGFloat = 0
     @State private var keyboardVisible: Bool = false
+    @State private var viewID = UUID()
     let expense: Expense
 
     init(viewModel: ExpenseViewModel, expense: Expense) {
@@ -171,6 +172,7 @@ struct EditExpenseView: View {
                     .padding(.bottom, keyboardHeight > 0 ? keyboardHeight - 40 : 20)
                 }
             }
+            .id(viewID)
             .navigationTitle("Edit Expense")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -191,6 +193,8 @@ struct EditExpenseView: View {
                 }
             }
             .onAppear {
+                viewID = UUID()
+                
                 setupKeyboardObservers()
                 print("DEBUG: EditExpenseView appeared with notes: \"\(notes)\"")
                 

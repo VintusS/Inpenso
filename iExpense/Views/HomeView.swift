@@ -14,6 +14,8 @@ struct HomeView: View {
     @State private var showingAddExpense = false
     @State private var showRecentExpenses = true
     @State private var animateCards = false
+    @State private var selectedExpenseToEdit: Expense? = nil
+    @State private var showingEditExpense = false
     
     private let recentDaysToShow = 7
     
@@ -59,6 +61,9 @@ struct HomeView: View {
             }
             .sheet(isPresented: $showingAddExpense) {
                 AddExpenseView(viewModel: viewModel)
+            }
+            .sheet(item: $selectedExpenseToEdit) { expense in
+                EditExpenseView(viewModel: viewModel, expense: expense)
             }
             .onAppear {
                 // Animate cards when view appears with slight delay between each
@@ -342,7 +347,10 @@ struct HomeView: View {
                     let recentExpenses = viewModel.expenses.sorted { $0.date > $1.date }.prefix(5)
                     
                     ForEach(recentExpenses) { expense in
-                        NavigationLink(destination: EditExpenseView(viewModel: viewModel, expense: expense)) {
+                        Button {
+                            selectedExpenseToEdit = expense
+                            showingEditExpense = true
+                        } label: {
                             HStack(spacing: 12) {
                                 // Category icon
                                 Image(systemName: categoryIcon(for: expense.category))
