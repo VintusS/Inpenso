@@ -46,7 +46,7 @@ struct AnalyticsView: View {
                     .padding(.horizontal)
                 
                 // Content based on selected tab
-                ScrollView {
+                ScrollView(.vertical, showsIndicators: true) {
                     VStack(spacing: 16) {
                         switch selectedTab {
                         case .overview:
@@ -61,6 +61,7 @@ struct AnalyticsView: View {
                     }
                     .padding()
                 }
+                .scrollDisabled(false)
             }
             .navigationTitle("Analytics")
             .alert("Budget Saved", isPresented: $showSaveBudgetSuccess) {
@@ -163,6 +164,7 @@ struct AnalyticsView: View {
             // Monthly Trends Graph
             MonthlyTrendsView(monthlyTrends: analyticsViewModel.monthlyTrends)
                 .frame(height: 250)
+                .fixedSize(horizontal: false, vertical: true)
             
             // Top Growing Categories
             CategoryTrendsView(categoryTrends: analyticsViewModel.categoryTrends.map { trend in

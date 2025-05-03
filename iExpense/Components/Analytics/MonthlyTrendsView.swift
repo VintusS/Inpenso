@@ -21,38 +21,46 @@ struct MonthlyTrendsView: View {
                     .padding()
                     .frame(maxWidth: .infinity, alignment: .center)
             } else {
-                Chart {
-                    ForEach(monthlyTrends) { trend in
-                        LineMark(
-                            x: .value("Month", trend.shortMonthName),
-                            y: .value("Amount", trend.amount)
-                        )
-                        .foregroundStyle(Color.blue.gradient)
-                        .symbol {
-                            Circle()
-                                .fill(Color.blue)
-                                .frame(width: 7, height: 7)
-                        }
-                        .interpolationMethod(.catmullRom)
-                        
-                        AreaMark(
-                            x: .value("Month", trend.shortMonthName),
-                            y: .value("Amount", trend.amount)
-                        )
-                        .foregroundStyle(
-                            .linearGradient(
-                                colors: [.blue.opacity(0.3), .blue.opacity(0.0)],
-                                startPoint: .top,
-                                endPoint: .bottom
+                // Wrap the Chart in a GeometryReader to control its size precisely
+                GeometryReader { geometry in
+                    Chart {
+                        ForEach(monthlyTrends) { trend in
+                            LineMark(
+                                x: .value("Month", trend.shortMonthName),
+                                y: .value("Amount", trend.amount)
                             )
-                        )
-                        .interpolationMethod(.catmullRom)
+                            .foregroundStyle(Color.blue.gradient)
+                            .symbol {
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 7, height: 7)
+                            }
+                            .interpolationMethod(.catmullRom)
+                            
+                            AreaMark(
+                                x: .value("Month", trend.shortMonthName),
+                                y: .value("Amount", trend.amount)
+                            )
+                            .foregroundStyle(
+                                .linearGradient(
+                                    colors: [.blue.opacity(0.3), .blue.opacity(0.0)],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                )
+                            )
+                            .interpolationMethod(.catmullRom)
+                        }
                     }
+                    .chartYAxis {
+                        AxisMarks(position: .leading)
+                    }
+                    // Disable chart gestures
+                    .allowsHitTesting(false)
+                    // Fill the geometry reader
+                    .frame(width: geometry.size.width, height: 180)
                 }
-                .frame(height: 200)
-                .chartYAxis {
-                    AxisMarks(position: .leading)
-                }
+                .frame(height: 180)
+                .fixedSize(horizontal: false, vertical: true)
                 
                 if let firstTrend = monthlyTrends.first,
                    let lastTrend = monthlyTrends.last,
@@ -75,6 +83,8 @@ struct MonthlyTrendsView: View {
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.secondarySystemBackground))
         )
+        // Prevent gesture interference
+        .contentShape(Rectangle())
     }
 }
 

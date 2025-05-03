@@ -44,7 +44,8 @@ struct MonthYearPicker: View {
         var list: [MonthYear] = []
         let calendar = Calendar.current
         if let today = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: Date()) {
-            for i in 0..<monthsToShow {
+            // Start from the oldest month and go towards the newest
+            for i in (0..<monthsToShow).reversed() {
                 if let date = calendar.date(byAdding: .month, value: -i, to: today) {
                     let month = calendar.component(.month, from: date)
                     let year = calendar.component(.year, from: date)
@@ -60,35 +61,51 @@ struct MonthYearPicker: View {
     }
     
     var body: some View {
-        TabView(selection: $selectedIndex) {
-            ForEach(Array(monthYearList.enumerated()), id: \.element.id) { index, monthYear in
-                Text(monthYear.displayName)
-                    .font(.title2)
-                    .fontWeight(.bold)
+        VStack(spacing: 0) {
+            TabView(selection: $selectedIndex) {
+                ForEach(Array(monthYearList.enumerated()), id: \.element.id) { index, monthYear in
+                    HStack(spacing: 8) {
+                        Text(Calendar.current.monthSymbols[monthYear.month - 1])
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text(String(monthYear.year))
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 10)
                     .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(12)
                     .tag(index)
+                }
             }
-        }
-        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-        .frame(height: 60)
-        .onChange(of: selectedIndex) { newIndex in
-            let monthYear = monthYearList[newIndex]
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(height: 50)
+            .onChange(of: selectedIndex) { newIndex in
+                let monthYear = monthYearList[newIndex]
+                
+                // Prevent selecting future months
+                if monthYear.isFuture() {
+                    // Revert to previous selection
+                    selectedIndex = monthYearList.firstIndex(where: { $0.month == selectedMonth && $0.year == selectedYear }) ?? 0
+                    HapticFeedback.error()
+                } else {
+                    // Update selection
+                    selectedMonth = monthYear.month
+                    selectedYear = monthYear.year
+                    HapticFeedback.selection()
+                    onMonthYearChanged?()
+                }
+            }
             
-            // Prevent selecting future months
-            if monthYear.isFuture() {
-                // Revert to previous selection
-                selectedIndex = monthYearList.firstIndex(where: { $0.month == selectedMonth && $0.year == selectedYear }) ?? 0
-                HapticFeedback.error()
-            } else {
-                // Update selection
-                selectedMonth = monthYear.month
-                selectedYear = monthYear.year
-                HapticFeedback.selection()
-                onMonthYearChanged?()
+            // Month indicator dots just like in ExpensesListView
+            HStack(spacing: 4) {
+                ForEach(1...12, id: \.self) { month in
+                    Circle()
+                        .fill(month == selectedMonth ? Color.accentColor : Color.gray.opacity(0.3))
+                        .frame(width: 6, height: 6)
+                }
             }
+            .padding(.bottom, 8)
         }
         .onAppear {
             // Synchronize the picker with the current selection
