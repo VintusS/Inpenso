@@ -161,8 +161,6 @@ struct SettingsView: View {
     private var aboutSection: some View {
         Section(header: Text("About")) {
             versionRow
-            privacyLink
-            termsLink
         }
     }
     
@@ -172,18 +170,6 @@ struct SettingsView: View {
             Spacer()
             Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                 .foregroundColor(.secondary)
-        }
-    }
-    
-    private var privacyLink: some View {
-        Link(destination: URL(string: "https://www.example.com/privacy")!) {
-            Label("Privacy Policy", systemImage: "hand.raised")
-        }
-    }
-    
-    private var termsLink: some View {
-        Link(destination: URL(string: "https://www.example.com/terms")!) {
-            Label("Terms of Use", systemImage: "doc.text")
         }
     }
     
