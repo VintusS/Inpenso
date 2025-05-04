@@ -79,4 +79,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Dragomir Mindrescu - [@VintusS](https://github.com/VintusS)
 
-Project Link: [https://github.com/VintusS/Inpensa](https://github.com/VintusS/Inpensa) 
+Project Link: [https://github.com/VintusS/Inpensa](https://github.com/VintusS/Inpensa)

@@ -6,7 +6,7 @@ Following these guidelines helps to communicate that you respect the time of the
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the Inpensa Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [your-email@example.com].
+This project and everyone participating in it is governed by the Inpensa Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [dmindrescu03@gmail.com].
 
 ## How Can I Contribute?
 
