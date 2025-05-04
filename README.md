@@ -1,6 +1,8 @@
 # Inpensa
 
-![Inpensa Logo](https://via.placeholder.com/150x150.png?text=Inpensa)
+<p align="center">
+  <img src=".github/assets/inpensa-logo.png" alt="Inpensa Logo" width="150" height="150"/>
+</p>
 
 A modern, intuitive expense tracker for iOS that helps you monitor spending, set budgets, and visualize your financial habits through beautiful analytics.
 
@@ -60,17 +62,6 @@ Contributions are welcome! If you'd like to contribute, please follow these step
 5. Open a Pull Request
 
 Please read the [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## Roadmap
-
-- [ ] Dark mode support
-- [ ] iCloud sync
-- [ ] Import/Export functionality
-- [ ] Advanced filtering options
-- [ ] Custom categories
-- [ ] Recurring expenses
-- [ ] Multiple currency support
-- [ ] Apple Watch companion app
 
 ## License
 
