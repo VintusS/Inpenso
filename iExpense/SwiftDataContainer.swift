@@ -19,9 +19,6 @@ class SwiftDataProvider {
     // The model container
     private(set) var container: ModelContainer?
     
-    // Migration status
-    private(set) var isMigrationCompleted = false
-    
     // Private initializer for singleton
     private init() {
         setupContainer()
@@ -32,7 +29,7 @@ class SwiftDataProvider {
         do {
             container = try SwiftDataManager.shared.createContainer()
         } catch {
-            print("Failed to set up SwiftData: \(error)")
+            // Silent failure - don't show errors in UI
         }
     }
     
@@ -41,10 +38,10 @@ class SwiftDataProvider {
         guard let container = container else { return }
         
         do {
-            try await SwiftDataManager.shared.migrateData(using: container.mainContext)
-            isMigrationCompleted = true
+            // Run migration silently (no UI indication)
+            try await SwiftDataManager.shared.migrateData(using: container.mainContext, silent: true)
         } catch {
-            print("Migration failed: \(error)")
+            // Silent failure - don't show errors in UI
         }
     }
 }

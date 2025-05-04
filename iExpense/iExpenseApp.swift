@@ -10,9 +10,6 @@ import Foundation
 
 @main
 struct iExpenseApp: App {
-    // Flag to track SwiftData migration status
-    @State private var showMigrationMessage = false
-    
     init() {
         // On app launch, ensure settings are synced to the shared UserDefaults
         syncSettingsToSharedDefaults()
@@ -23,30 +20,9 @@ struct iExpenseApp: App {
             MainTabView()
                 // Use the optional SwiftData container that won't affect existing code
                 .withSwiftData()
-                // Perform the migration once on app startup
+                // Perform the migration silently on app startup
                 .task {
                     await SwiftDataProvider.shared.startMigration()
-                    showMigrationMessage = SwiftDataProvider.shared.isMigrationCompleted
-                }
-                // Optionally show a migration success message
-                .overlay {
-                    if showMigrationMessage {
-                        VStack {
-                            Spacer()
-                            Text("Data migration to SwiftData completed")
-                                .font(.caption)
-                                .padding(8)
-                                .background(.regularMaterial)
-                                .cornerRadius(8)
-                                .onAppear {
-                                    // Automatically hide the message after 3 seconds
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                        showMigrationMessage = false
-                                    }
-                                }
-                            Spacer().frame(height: 40)
-                        }
-                    }
                 }
         }
     }

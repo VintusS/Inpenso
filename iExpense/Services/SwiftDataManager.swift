@@ -38,43 +38,53 @@ class SwiftDataManager {
     // MARK: - Migration
     
     // Migrates data from UserDefaults to SwiftData without affecting current functionality
-    func migrateData(using context: ModelContext) async throws {
+    func migrateData(using context: ModelContext, silent: Bool = true) async throws {
         // Check if migration has already been done
         if UserDefaults.standard.bool(forKey: "swiftDataMigrationCompleted") {
             return
         }
         
         // Migrate expenses
-        try await migrateExpenses(using: context)
+        try await migrateExpenses(using: context, silent: silent)
         
         // Migrate budgets
-        try await migrateBudgets(using: context)
+        try await migrateBudgets(using: context, silent: silent)
         
         // Mark migration as completed
         UserDefaults.standard.set(true, forKey: "swiftDataMigrationCompleted")
     }
     
-    private func migrateExpenses(using context: ModelContext) async throws {
+    private func migrateExpenses(using context: ModelContext, silent: Bool = true) async throws {
         // Load expenses from UserDefaults
         let existingExpenses = StorageService.loadExpenses()
         
         // Convert and save each expense
         for expense in existingExpenses {
+            // Get notes (if any)
+            let notesKey = "notes_\(expense.id.uuidString)"
+            let notes = UserDefaults.standard.string(forKey: notesKey)
+            
+            // Create the ExpenseItem
             let item = ExpenseItem(
                 id: expense.id.uuidString,
                 name: expense.title,
                 amount: expense.price,
                 date: expense.date,
-                categoryName: expense.category.rawValue
+                categoryName: expense.category.rawValue,
+                notes: notes
             )
             
             context.insert(item)
         }
         
         try context.save()
+        
+        if !silent {
+            print("Migrated \(existingExpenses.count) expenses to SwiftData")
+        }
     }
     
-    private func migrateBudgets(using context: ModelContext) async throws {
+    private func migrateBudgets(using context: ModelContext, silent: Bool = true) async throws {
         // Load budgets from UserDefaults
         let existingBudgets = StorageService.loadBudgets()
         
@@ -85,6 +95,10 @@ class SwiftDataManager {
         }
         
         try context.save()
+        
+        if !silent {
+            print("Migrated \(existingBudgets.count) budgets to SwiftData")
+        }
     }
     
     // MARK: - Read Operations
@@ -127,13 +141,18 @@ class SwiftDataManager {
     // MARK: - Write Operations
     
     func saveExpense(_ expense: Expense, using context: ModelContext) throws {
-        // Convert from the app's Expense model to SwiftData's ExpenseItem
+        // Get notes for this expense if they exist
+        let notesKey = "notes_\(expense.id.uuidString)"
+        let notes = UserDefaults.standard.string(forKey: notesKey)
+        
+        // Create the ExpenseItem
         let item = ExpenseItem(
             id: expense.id.uuidString,
             name: expense.title,
             amount: expense.price,
             date: expense.date,
-            categoryName: expense.category.rawValue
+            categoryName: expense.category.rawValue,
+            notes: notes
         )
         
         context.insert(item)
