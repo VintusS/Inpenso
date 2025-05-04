@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		714E831A2DBE3598005ED7BB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E83192DBE3597005ED7BB /* WidgetKit.framework */; };
 		714E831C2DBE3598005ED7BB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E831B2DBE3598005ED7BB /* SwiftUI.framework */; };
-		714E832D2DBE3599005ED7BB /* iExpenseWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 714E83172DBE3597005ED7BB /* iExpenseWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		714E832D2DBE3599005ED7BB /* InpensoWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 714E83172DBE3597005ED7BB /* InpensoWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		714E834D2DBE654D005ED7BB /* ProjectPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714E834C2DBE654D005ED7BB /* ProjectPlan.swift */; };
 		714E834E2DBE654D005ED7BB /* ProjectPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714E834C2DBE654D005ED7BB /* ProjectPlan.swift */; };
 /* End PBXBuildFile section */
@@ -31,7 +31,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				714E832D2DBE3599005ED7BB /* iExpenseWidgetExtensionExtension.appex in Embed Foundation Extensions */,
+				714E832D2DBE3599005ED7BB /* InpensoWidgetExtensionExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -39,8 +39,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		714E82F32DBE3124005ED7BB /* iExpense.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iExpense.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		714E83172DBE3597005ED7BB /* iExpenseWidgetExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = iExpenseWidgetExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		714E82F32DBE3124005ED7BB /* Inpenso.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Inpenso.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		714E83172DBE3597005ED7BB /* InpensoWidgetExtensionExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = InpensoWidgetExtensionExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		714E83192DBE3597005ED7BB /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		714E831B2DBE3598005ED7BB /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		714E833D2DBE39CE005ED7BB /* iExpenseWidgetExtensionExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = iExpenseWidgetExtensionExtension.entitlements; sourceTree = "<group>"; };
@@ -48,14 +48,14 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		714E832E2DBE3599005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "iExpenseWidgetExtensionExtension" target */ = {
+		714E832E2DBE3599005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "InpensoWidgetExtensionExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = 714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */;
+			target = 714E83162DBE3597005ED7BB /* InpensoWidgetExtensionExtension */;
 		};
-		714E83342DBE3694005ED7BB /* Exceptions for "iExpense" folder in "iExpenseWidgetExtensionExtension" target */ = {
+		714E83342DBE3694005ED7BB /* Exceptions for "iExpense" folder in "InpensoWidgetExtensionExtension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Models/Category.swift,
@@ -63,14 +63,14 @@
 				Services/StorageService.swift,
 				Utils/CurrencyCode.swift,
 			);
-			target = 714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */;
+			target = 714E83162DBE3597005ED7BB /* InpensoWidgetExtensionExtension */;
 		};
-		714E833A2DBE37C2005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "iExpense" target */ = {
+		714E833A2DBE37C2005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "Inpenso" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				QuickAddConfigurationIntent.swift,
 			);
-			target = 714E82F22DBE3124005ED7BB /* iExpense */;
+			target = 714E82F22DBE3124005ED7BB /* Inpenso */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
@@ -78,7 +78,7 @@
 		714E82F52DBE3124005ED7BB /* iExpense */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				714E83342DBE3694005ED7BB /* Exceptions for "iExpense" folder in "iExpenseWidgetExtensionExtension" target */,
+				714E83342DBE3694005ED7BB /* Exceptions for "iExpense" folder in "InpensoWidgetExtensionExtension" target */,
 			);
 			path = iExpense;
 			sourceTree = "<group>";
@@ -86,8 +86,8 @@
 		714E831D2DBE3598005ED7BB /* iExpenseWidgetExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				714E833A2DBE37C2005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "iExpense" target */,
-				714E832E2DBE3599005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "iExpenseWidgetExtensionExtension" target */,
+				714E833A2DBE37C2005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "Inpenso" target */,
+				714E832E2DBE3599005ED7BB /* Exceptions for "iExpenseWidgetExtension" folder in "InpensoWidgetExtensionExtension" target */,
 			);
 			path = iExpenseWidgetExtension;
 			sourceTree = "<group>";
@@ -129,8 +129,8 @@
 		714E82F42DBE3124005ED7BB /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				714E82F32DBE3124005ED7BB /* iExpense.app */,
-				714E83172DBE3597005ED7BB /* iExpenseWidgetExtensionExtension.appex */,
+				714E82F32DBE3124005ED7BB /* Inpenso.app */,
+				714E83172DBE3597005ED7BB /* InpensoWidgetExtensionExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -147,9 +147,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		714E82F22DBE3124005ED7BB /* iExpense */ = {
+		714E82F22DBE3124005ED7BB /* Inpenso */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 714E82FE2DBE3126005ED7BB /* Build configuration list for PBXNativeTarget "iExpense" */;
+			buildConfigurationList = 714E82FE2DBE3126005ED7BB /* Build configuration list for PBXNativeTarget "Inpenso" */;
 			buildPhases = (
 				714E82EF2DBE3124005ED7BB /* Sources */,
 				714E82F02DBE3124005ED7BB /* Frameworks */,
@@ -164,16 +164,16 @@
 			fileSystemSynchronizedGroups = (
 				714E82F52DBE3124005ED7BB /* iExpense */,
 			);
-			name = iExpense;
+			name = Inpenso;
 			packageProductDependencies = (
 			);
 			productName = iExpense;
-			productReference = 714E82F32DBE3124005ED7BB /* iExpense.app */;
+			productReference = 714E82F32DBE3124005ED7BB /* Inpenso.app */;
 			productType = "com.apple.product-type.application";
 		};
-		714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */ = {
+		714E83162DBE3597005ED7BB /* InpensoWidgetExtensionExtension */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 714E832F2DBE3599005ED7BB /* Build configuration list for PBXNativeTarget "iExpenseWidgetExtensionExtension" */;
+			buildConfigurationList = 714E832F2DBE3599005ED7BB /* Build configuration list for PBXNativeTarget "InpensoWidgetExtensionExtension" */;
 			buildPhases = (
 				714E83132DBE3597005ED7BB /* Sources */,
 				714E83142DBE3597005ED7BB /* Frameworks */,
@@ -186,11 +186,11 @@
 			fileSystemSynchronizedGroups = (
 				714E831D2DBE3598005ED7BB /* iExpenseWidgetExtension */,
 			);
-			name = iExpenseWidgetExtensionExtension;
+			name = InpensoWidgetExtensionExtension;
 			packageProductDependencies = (
 			);
 			productName = iExpenseWidgetExtensionExtension;
-			productReference = 714E83172DBE3597005ED7BB /* iExpenseWidgetExtensionExtension.appex */;
+			productReference = 714E83172DBE3597005ED7BB /* InpensoWidgetExtensionExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -211,7 +211,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 714E82EE2DBE3124005ED7BB /* Build configuration list for PBXProject "iExpense" */;
+			buildConfigurationList = 714E82EE2DBE3124005ED7BB /* Build configuration list for PBXProject "Inpenso" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -225,8 +225,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				714E82F22DBE3124005ED7BB /* iExpense */,
-				714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */,
+				714E82F22DBE3124005ED7BB /* Inpenso */,
+				714E83162DBE3597005ED7BB /* InpensoWidgetExtensionExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -270,7 +270,7 @@
 /* Begin PBXTargetDependency section */
 		714E832C2DBE3599005ED7BB /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 714E83162DBE3597005ED7BB /* iExpenseWidgetExtensionExtension */;
+			target = 714E83162DBE3597005ED7BB /* InpensoWidgetExtensionExtension */;
 			targetProxy = 714E832B2DBE3599005ED7BB /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -516,7 +516,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		714E82EE2DBE3124005ED7BB /* Build configuration list for PBXProject "iExpense" */ = {
+		714E82EE2DBE3124005ED7BB /* Build configuration list for PBXProject "Inpenso" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				714E82FC2DBE3126005ED7BB /* Debug */,
@@ -525,7 +525,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		714E82FE2DBE3126005ED7BB /* Build configuration list for PBXNativeTarget "iExpense" */ = {
+		714E82FE2DBE3126005ED7BB /* Build configuration list for PBXNativeTarget "Inpenso" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				714E82FF2DBE3126005ED7BB /* Debug */,
@@ -534,7 +534,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		714E832F2DBE3599005ED7BB /* Build configuration list for PBXNativeTarget "iExpenseWidgetExtensionExtension" */ = {
+		714E832F2DBE3599005ED7BB /* Build configuration list for PBXNativeTarget "InpensoWidgetExtensionExtension" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				714E83302DBE3599005ED7BB /* Debug */,
