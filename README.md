@@ -1,7 +1,9 @@
 # Inpensa
 
 <p align="center">
-  <img src=".github/assets/inpensa-logo.png" alt="Inpensa Logo" width="150" height="150"/>
+  <kbd>
+    <img src=".github/assets/inpensa-logo.png" alt="Inpensa Logo" width="150" height="150"/>
+  </kbd>
 </p>
 
 A modern, intuitive expense tracker for iOS that helps you monitor spending, set budgets, and visualize your financial habits through beautiful analytics.
@@ -19,9 +21,9 @@ A modern, intuitive expense tracker for iOS that helps you monitor spending, set
 
 <table>
   <tr>
-    <td><img src="https://via.placeholder.com/250x500.png?text=Dashboard" alt="Dashboard"></td>
-    <td><img src="https://via.placeholder.com/250x500.png?text=Analytics" alt="Analytics"></td>
-    <td><img src="https://via.placeholder.com/250x500.png?text=Widget" alt="Widget"></td>
+    <td><img src=".github/assets/dashboard-screenshot.png" alt="Dashboard" width="250"/></td>
+    <td><img src=".github/assets/analytics-screenshot.png" alt="Analytics" width="250"/></td>
+    <td><img src=".github/assets/add-expense-screenshot.png" alt="Add Expense" width="250"/></td>
   </tr>
 </table>
 
