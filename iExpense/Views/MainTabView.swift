@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct MainTabView: View {
     @StateObject private var viewModel = ExpenseViewModel()
@@ -40,6 +41,13 @@ struct MainTabView: View {
                         Label("Settings", systemImage: "gearshape.fill")
                     }
                     .tag(3)
+                
+                // New tab for SwiftData testing
+                SwiftDataTestView()
+                    .tabItem {
+                        Label("SwiftData", systemImage: "externaldrive.fill")
+                    }
+                    .tag(4)
             }
         }
         .preferredColorScheme(colorScheme)

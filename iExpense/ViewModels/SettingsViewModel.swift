@@ -121,6 +121,7 @@ class SettingsViewModel: ObservableObject {
             
             let fileManager = FileManager.default
             let documentDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
+            print("DEBUG: exported file \(exportFileName).json")
             let fileURL = documentDirectory.appendingPathComponent("\(exportFileName).json")
             
             try jsonData.write(to: fileURL)
