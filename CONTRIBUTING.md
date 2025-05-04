@@ -1,22 +1,22 @@
-# Contributing to Inpensa
+# Contributing to Inpenso
 
-First off, thank you for considering contributing to Inpensa! It's people like you that make Inpensa such a great tool.
+First off, thank you for considering contributing to Inpenso! It's people like you that make Inpenso such a great tool.
 
 Following these guidelines helps to communicate that you respect the time of the developers managing and developing this open source project. In return, they should reciprocate that respect in addressing your issue, assessing changes, and helping you finalize your pull requests.
 
 ## Code of Conduct
 
-This project and everyone participating in it is governed by the Inpensa Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [dmindrescu03@gmail.com].
+This project and everyone participating in it is governed by the Inpenso Code of Conduct. By participating, you are expected to uphold this code. Please report unacceptable behavior to [dmindrescu03@gmail.com].
 
 ## How Can I Contribute?
 
 ### Reporting Bugs
 
-This section guides you through submitting a bug report for Inpensa. Following these guidelines helps maintainers and the community understand your report, reproduce the behavior, and find related reports.
+This section guides you through submitting a bug report for Inpenso. Following these guidelines helps maintainers and the community understand your report, reproduce the behavior, and find related reports.
 
 **Before Submitting A Bug Report:**
 - Check the debugging guide for tips — you might be able to find the cause of the problem and fix things yourself.
-- Check if you can reproduce the problem in the latest version of Inpensa.
+- Check if you can reproduce the problem in the latest version of Inpenso.
 - Perform a cursory search to see if the problem has already been reported. If it has and the issue is still open, add a comment to the existing issue instead of opening a new one.
 
 **How Do I Submit A Bug Report?**
@@ -32,10 +32,10 @@ Bugs are tracked as GitHub issues. Create an issue and provide the following inf
 
 ### Suggesting Enhancements
 
-This section guides you through submitting an enhancement suggestion for Inpensa, including completely new features and minor improvements to existing functionality.
+This section guides you through submitting an enhancement suggestion for Inpenso, including completely new features and minor improvements to existing functionality.
 
 **Before Submitting An Enhancement Suggestion:**
-- Check if you're using the latest version of Inpensa.
+- Check if you're using the latest version of Inpenso.
 - Perform a search to see if the enhancement has already been suggested. If it has, add a comment to the existing issue instead of opening a new one.
 
 **How Do I Submit An Enhancement Suggestion?**
@@ -43,10 +43,10 @@ Enhancement suggestions are tracked as GitHub issues. Create an issue and provid
 
 - Use a clear and descriptive title for the issue to identify the suggestion.
 - Provide a step-by-step description of the suggested enhancement in as many details as possible.
-- Provide specific examples to demonstrate the steps or point out the part of Inpensa which the suggestion relates to.
+- Provide specific examples to demonstrate the steps or point out the part of Inpenso which the suggestion relates to.
 - Describe the current behavior and explain which behavior you expected to see instead and why.
-- Include screenshots or screen recordings which help you demonstrate the steps or point out the part of Inpensa which the suggestion relates to.
-- Explain why this enhancement would be useful to most Inpensa users.
+- Include screenshots or screen recordings which help you demonstrate the steps or point out the part of Inpenso which the suggestion relates to.
+- Explain why this enhancement would be useful to most Inpenso users.
 
 ### Pull Requests
 
@@ -95,4 +95,4 @@ This section lists the labels we use to help us track and manage issues and pull
 * **help-wanted** - We need help with this!
 * **wip** - Work in progress
 
-Thank you for contributing to Inpensa! 
+Thank you for contributing to Inpenso! 

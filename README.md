@@ -1,4 +1,4 @@
-# Inpensa
+# Inpenso
 
 <p align="center">
   <kbd>
@@ -37,16 +37,16 @@ A modern, intuitive expense tracker for iOS that helps you monitor spending, set
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/VintusS/Inpensa.git
+git clone https://github.com/VintusS/Inpenso.git
 ```
 
-2. Open `Inpensa.xcodeproj` in Xcode.
+2. Open `Inpenso.xcodeproj` in Xcode.
 
 3. Build and run the app on your iOS device or simulator.
 
 ## Architecture
 
-Inpensa follows the MVVM (Model-View-ViewModel) architecture pattern:
+Inpenso follows the MVVM (Model-View-ViewModel) architecture pattern:
 
 - **Models**: Data structures representing expenses, categories, and budgets
 - **Views**: SwiftUI views for user interface
@@ -71,7 +71,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- Thanks to all contributors who have helped shape Inpensa
+- Thanks to all contributors who have helped shape Inpenso
 - Icons provided by SF Symbols
 - Inspiration from other personal finance apps
 
@@ -79,4 +79,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 Dragomir Mindrescu - [@VintusS](https://github.com/VintusS)
 
-Project Link: [https://github.com/VintusS/Inpensa](https://github.com/VintusS/Inpensa)
+Project Link: [https://github.com/VintusS/Inpenso](https://github.com/VintusS/Inpenso)
+
+## Topics
+
+ios swift swiftui expense-tracker personal-finance budget-app analytics data-visualization mobile-app productivity tools 
