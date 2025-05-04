@@ -2,7 +2,7 @@
 
 <p align="center">
   <kbd>
-    <img src=".github/assets/inpensa-logo.png" alt="Inpensa Logo" width="150" height="150"/>
+    <img src=".github/assets/inpenso-logo.png" alt="Inpenso Logo" width="150" height="150"/>
   </kbd>
 </p>
 
