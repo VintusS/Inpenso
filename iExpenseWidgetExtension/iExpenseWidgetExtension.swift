@@ -181,22 +181,6 @@ struct iExpenseWidgetEntryView: View {
     // MARK: - Small Widget (2x2)
     var smallWidget: some View {
         ZStack {
-            // Background gradient for a more engaging look
-            RoundedRectangle(cornerRadius: 12)
-                .fill(
-                    LinearGradient(
-                        gradient: Gradient(
-                            colors: [
-                                Color(.systemBackground).opacity(0.8),
-                                Color(.systemBackground)
-                            ]
-                        ),
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .padding(4)
-            
             VStack(alignment: .center, spacing: 4) {
                 // "Monthly Spend" title with icon
                 HStack(spacing: 4) {
@@ -243,8 +227,8 @@ struct iExpenseWidgetEntryView: View {
                 
                 Spacer()
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
         }
     }
     
@@ -299,7 +283,7 @@ struct iExpenseWidgetEntryView: View {
                 .frame(width: 100, height: 100)
             }
         }
-        .padding()
+        .padding(16)
     }
     
     // MARK: - Large Widget
@@ -386,7 +370,7 @@ struct iExpenseWidgetEntryView: View {
                 Spacer()
             }
         }
-        .padding()
+        .padding(16)
     }
     
     // Helper function to get category icon
@@ -424,11 +408,18 @@ struct iExpenseWidgetExtension: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: kind, provider: ExpenseQuickAddProvider()) { entry in
             iExpenseWidgetEntryView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .containerBackground(.widgetBackground, for: .widget)
         }
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .configurationDisplayName("iExpense Tracker")
         .description("Track your monthly spending, budget progress, and top categories at a glance.")
+    }
+}
+
+// MARK: - Widget Background Extension
+extension ShapeStyle where Self == Color {
+    static var widgetBackground: Color {
+        Color(.systemBackground)
     }
 }
 
