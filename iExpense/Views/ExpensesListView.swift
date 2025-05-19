@@ -260,49 +260,66 @@ struct ExpensesListView: View {
     
     private var monthYearPicker: some View {
         VStack(spacing: 0) {
-            TabView(selection: $selectedDateIndex) {
-                ForEach(generateMonthYearList().indices, id: \.self) { index in
-                    let monthYear = generateMonthYearList()[index]
-                    let month = monthYear.month
-                    let year = monthYear.year
-                    
-                    HStack(spacing: 8) {
-                        Text(Calendar.current.monthSymbols[month - 1])
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Text(String(year))
-                            .font(.title3)
-                            .foregroundColor(.secondary)
+            HStack(spacing: 16) {
+                // Left Arrow Button
+                Button(action: {
+                    if selectedDateIndex > 0 {
+                        selectedDateIndex -= 1
+                        updateSelection()
                     }
-                    .padding(.vertical, 10)
-                    .frame(maxWidth: .infinity)
-                    .tag(index)
+                }) {
+                    Image(systemName: "chevron.left")
+                        .font(.title2)
+                        .foregroundColor(selectedDateIndex > 0 ? .primary : .gray)
+                        .padding(.leading, 16) // Added padding
                 }
-            }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            .frame(height: 50)
-            .onChange(of: selectedDateIndex) { newIndex in
-                let monthYearList = generateMonthYearList()
-                let today = Date()
-                let calendar = Calendar.current
-                let todayMonth = calendar.component(.month, from: today)
-                let todayYear = calendar.component(.year, from: today)
+                .disabled(selectedDateIndex == 0)
                 
-                if let todayIndex = monthYearList.firstIndex(where: { $0.month == todayMonth && $0.year == todayYear }) {
-                    if newIndex > todayIndex {
-                        selectedDateIndex = todayIndex
-                        triggerErrorHaptic()
-                    } else {
-                        let monthYear = monthYearList[newIndex]
-                        selectedMonth = monthYear.month
-                        selectedYear = monthYear.year
-                        triggerHaptic()
+                // TabView for Month-Year Swiping
+                TabView(selection: $selectedDateIndex) {
+                    ForEach(generateMonthYearList().indices, id: \.self) { index in
+                        let monthYear = generateMonthYearList()[index]
+                        let month = monthYear.month
+                        let year = monthYear.year
+                        
+                        HStack(spacing: 8) {
+                            Text(Calendar.current.monthSymbols[month - 1])
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            Text(String(year))
+                                .font(.title3)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity)
+                        .tag(index)
                     }
                 }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .frame(height: 50)
+                .onChange(of: selectedDateIndex) {
+                    updateSelection()
+                }
+                .padding(.horizontal, 16) // Added padding
+                
+                // Right Arrow Button
+                Button(action: {
+                    let monthYearList = generateMonthYearList()
+                    if selectedDateIndex < monthYearList.count - 1 {
+                        selectedDateIndex += 1
+                        updateSelection()
+                    }
+                }) {
+                    Image(systemName: "chevron.right")
+                        .font(.title2)
+                        .foregroundColor(selectedDateIndex < generateMonthYearList().count - 1 ? .primary : .gray)
+                        .padding(.trailing, 16) // Added padding
+                }
+                .disabled(selectedDateIndex >= generateMonthYearList().count - 1)
             }
             
-            // Month indicator dots
+            // Month Indicator Dots
             HStack(spacing: 4) {
                 ForEach(1...12, id: \.self) { month in
                     Circle()
@@ -311,8 +328,32 @@ struct ExpensesListView: View {
                 }
             }
             .padding(.bottom, 8)
+            .padding(.horizontal, 16) // Added padding
         }
     }
+
+    // Helper function for updating the selected month and year
+    private func updateSelection() {
+        let monthYearList = generateMonthYearList()
+        let today = Date()
+        let calendar = Calendar.current
+        let todayMonth = calendar.component(.month, from: today)
+        let todayYear = calendar.component(.year, from: today)
+        
+        if let todayIndex = monthYearList.firstIndex(where: { $0.month == todayMonth && $0.year == todayYear }) {
+            if selectedDateIndex > todayIndex {
+                selectedDateIndex = todayIndex
+                triggerErrorHaptic()
+            } else {
+                let monthYear = monthYearList[selectedDateIndex]
+                selectedMonth = monthYear.month
+                selectedYear = monthYear.year
+                triggerHaptic()
+            }
+        }
+    }
+
+
     
     // MARK: - Summary Card
     
