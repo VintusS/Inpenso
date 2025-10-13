@@ -53,7 +53,7 @@ struct DatePickerCard: View {
                                 .datePickerStyle(GraphicalDatePickerStyle())
                                 .labelsHidden()
                                 .padding(.horizontal)
-                                .onChange(of: selectedDate) { _ in
+                                .onChange(of: selectedDate) {
                                     HapticFeedback.selection()
                                 }
                         } else {
@@ -61,7 +61,7 @@ struct DatePickerCard: View {
                                 .datePickerStyle(GraphicalDatePickerStyle())
                                 .labelsHidden()
                                 .padding(.horizontal)
-                                .onChange(of: selectedDate) { _ in
+                                .onChange(of: selectedDate) {
                                     HapticFeedback.selection()
                                 }
                         }

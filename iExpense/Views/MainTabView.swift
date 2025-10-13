@@ -53,10 +53,10 @@ struct MainTabView: View {
                 selectedTab = 2 // Switch to Expenses tab
             }
         }
-        .onChange(of: viewModel.expenses) { newExpenses in
-            analyticsViewModel.updateExpenses(newExpenses)
+        .onChange(of: viewModel.expenses) {
+            analyticsViewModel.updateExpenses(viewModel.expenses)
         }
-        .onChange(of: settingsViewModel.selectedTheme) { _ in
+        .onChange(of: settingsViewModel.selectedTheme) {
             updateColorScheme()
         }
     }

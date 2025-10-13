@@ -152,7 +152,7 @@ struct ExpensesListView: View {
                 }
             }
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search expenses")
-            .onChange(of: searchText) { _ in
+            .onChange(of: searchText) {
                 withAnimation {
                     isSearchActive = !searchText.isEmpty
                 }
@@ -204,7 +204,7 @@ struct ExpensesListView: View {
                     }
                 }
             }
-            .onChange(of: viewModel.expenses) { _ in
+            .onChange(of: viewModel.expenses) {
                 analyticsViewModel.updateExpenses(viewModel.expenses)
             }
             .sheet(item: $selectedExpenseToEdit) { expenseToEdit in
@@ -282,7 +282,7 @@ struct ExpensesListView: View {
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             .frame(height: 50)
-            .onChange(of: selectedDateIndex) { newIndex in
+            .onChange(of: selectedDateIndex) {
                 let monthYearList = generateMonthYearList()
                 let today = Date()
                 let calendar = Calendar.current
@@ -290,11 +290,11 @@ struct ExpensesListView: View {
                 let todayYear = calendar.component(.year, from: today)
                 
                 if let todayIndex = monthYearList.firstIndex(where: { $0.month == todayMonth && $0.year == todayYear }) {
-                    if newIndex > todayIndex {
+                    if selectedDateIndex > todayIndex {
                         selectedDateIndex = todayIndex
                         triggerErrorHaptic()
                     } else {
-                        let monthYear = monthYearList[newIndex]
+                        let monthYear = monthYearList[selectedDateIndex]
                         selectedMonth = monthYear.month
                         selectedYear = monthYear.year
                         triggerHaptic()

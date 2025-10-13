@@ -80,8 +80,8 @@ struct MonthYearPicker: View {
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
             .frame(height: 50)
-            .onChange(of: selectedIndex) { newIndex in
-                let monthYear = monthYearList[newIndex]
+            .onChange(of: selectedIndex) {
+                let monthYear = monthYearList[selectedIndex]
                 
                 // Prevent selecting future months
                 if monthYear.isFuture() {
