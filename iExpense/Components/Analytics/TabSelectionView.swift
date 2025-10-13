@@ -49,7 +49,7 @@ struct AnalyticsTabSelector: View {
     }
 }
 
-#Preview {
+#Preview(traits: .sizeThatFitsLayout) {
     VStack {
         AnalyticsTabSelector(selectedTab: .constant(.overview))
         AnalyticsTabSelector(selectedTab: .constant(.trends))
@@ -57,5 +57,4 @@ struct AnalyticsTabSelector: View {
         AnalyticsTabSelector(selectedTab: .constant(.budget))
     }
     .padding()
-    .previewLayout(.sizeThatFits)
 } 

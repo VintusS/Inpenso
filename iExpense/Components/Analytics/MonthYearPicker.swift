@@ -116,7 +116,7 @@ struct MonthYearPicker: View {
     }
 }
 
-#Preview {
+#Preview(traits: .sizeThatFitsLayout) {
     VStack(spacing: 20) {
         MonthYearPicker(
             selectedMonth: .constant(Calendar.current.component(.month, from: Date())),
@@ -128,5 +128,4 @@ struct MonthYearPicker: View {
             .foregroundColor(.secondary)
     }
     .padding()
-    .previewLayout(.sizeThatFits)
 } 
