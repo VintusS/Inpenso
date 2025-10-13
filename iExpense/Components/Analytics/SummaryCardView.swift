@@ -107,7 +107,7 @@ struct SummaryCardGrid: View {
     }
 }
 
-#Preview {
+#Preview(traits: .sizeThatFitsLayout) {
     VStack(spacing: 20) {
         SummaryCard(
             title: "Total Spent",
@@ -149,5 +149,4 @@ struct SummaryCardGrid: View {
         ])
     }
     .padding()
-    .previewLayout(.sizeThatFits)
 } 

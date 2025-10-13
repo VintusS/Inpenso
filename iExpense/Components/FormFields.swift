@@ -72,8 +72,8 @@ struct CurrencyFormField: View {
                     .fontWeight(.semibold)
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.leading)
-                    .onChange(of: amount) { newValue in
-                        amount = formatCurrencyInput(newValue)
+                    .onChange(of: amount) { 
+                        amount = formatCurrencyInput(amount)
                     }
                 
                 Spacer()

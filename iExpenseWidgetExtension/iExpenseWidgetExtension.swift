@@ -7,7 +7,7 @@ import AppIntents
 import Foundation
 
 // Global app group ID for consistency - must match StorageService.appGroupID
-let appGroupID = "group.com.vintuss.iexpense"
+let appGroupID = "group.com.vintuss.Inpenso"
 
 // Global function to get currency code from shared UserDefaults
 func getAppCurrency() -> String {
