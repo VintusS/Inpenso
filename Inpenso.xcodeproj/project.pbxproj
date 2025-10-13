@@ -7,8 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		714E831A2DBE3598005ED7BB /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E83192DBE3597005ED7BB /* WidgetKit.framework */; };
-		714E831C2DBE3598005ED7BB /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E831B2DBE3598005ED7BB /* SwiftUI.framework */; };
+		712792832E9D8091007D3B0B /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E831B2DBE3598005ED7BB /* SwiftUI.framework */; };
+		712792842E9D8091007D3B0B /* SwiftUI.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 714E831B2DBE3598005ED7BB /* SwiftUI.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		712792862E9D8092007D3B0B /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 714E83192DBE3597005ED7BB /* WidgetKit.framework */; };
+		712792872E9D8092007D3B0B /* WidgetKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 714E83192DBE3597005ED7BB /* WidgetKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		714E832D2DBE3599005ED7BB /* InpensoWidgetExtensionExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 714E83172DBE3597005ED7BB /* InpensoWidgetExtensionExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		714E834D2DBE654D005ED7BB /* ProjectPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714E834C2DBE654D005ED7BB /* ProjectPlan.swift */; };
 		714E834E2DBE654D005ED7BB /* ProjectPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714E834C2DBE654D005ED7BB /* ProjectPlan.swift */; };
@@ -25,6 +27,18 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		712792852E9D8091007D3B0B /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				712792842E9D8091007D3B0B /* SwiftUI.framework in Embed Frameworks */,
+				712792872E9D8092007D3B0B /* WidgetKit.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		714E83322DBE3599005ED7BB /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -106,8 +120,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				714E831C2DBE3598005ED7BB /* SwiftUI.framework in Frameworks */,
-				714E831A2DBE3598005ED7BB /* WidgetKit.framework in Frameworks */,
+				712792832E9D8091007D3B0B /* SwiftUI.framework in Frameworks */,
+				712792862E9D8092007D3B0B /* WidgetKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -178,6 +192,7 @@
 				714E83132DBE3597005ED7BB /* Sources */,
 				714E83142DBE3597005ED7BB /* Frameworks */,
 				714E83152DBE3597005ED7BB /* Resources */,
+				712792852E9D8091007D3B0B /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -201,7 +216,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1630;
-				LastUpgradeCheck = 1630;
+				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					714E82F22DBE3124005ED7BB = {
 						CreatedOnToolsVersion = 16.3;
@@ -335,6 +350,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -392,6 +408,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
@@ -411,6 +428,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -418,7 +437,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.iExpense;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.Inpenso;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -440,6 +459,8 @@
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UIRequiresFullScreen = YES;
+				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -447,7 +468,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.3;
-				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.iExpense;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.Inpenso;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -474,8 +495,8 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.iExpense.iExpenseWidgetExtension;
+				MARKETING_VERSION = 1.0.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.Inpenso.iExpenseWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -503,8 +524,8 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.iExpense.iExpenseWidgetExtension;
+				MARKETING_VERSION = 1.0.4;
+				PRODUCT_BUNDLE_IDENTIFIER = com.vintuss.Inpenso.iExpenseWidgetExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;

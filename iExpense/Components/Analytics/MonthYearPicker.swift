@@ -97,6 +97,11 @@ struct MonthYearPicker: View {
                 .onChange(of: selectedIndex) {
                     updateSelection()
                 }
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(height: 50)
+            .onChange(of: selectedIndex) {
+                let monthYear = monthYearList[selectedIndex]
                 
                 // Right Arrow Button
                 Button(action: {
@@ -148,7 +153,7 @@ struct MonthYearPicker: View {
     }
 }
 
-#Preview {
+#Preview(traits: .sizeThatFitsLayout) {
     VStack(spacing: 20) {
         MonthYearPicker(
             selectedMonth: .constant(Calendar.current.component(.month, from: Date())),
@@ -160,5 +165,4 @@ struct MonthYearPicker: View {
             .foregroundColor(.secondary)
     }
     .padding()
-    .previewLayout(.sizeThatFits)
-}
+} 

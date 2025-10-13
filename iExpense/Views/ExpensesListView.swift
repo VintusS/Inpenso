@@ -152,7 +152,7 @@ struct ExpensesListView: View {
                 }
             }
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search expenses")
-            .onChange(of: searchText) { _ in
+            .onChange(of: searchText) {
                 withAnimation {
                     isSearchActive = !searchText.isEmpty
                 }
@@ -204,7 +204,7 @@ struct ExpensesListView: View {
                     }
                 }
             }
-            .onChange(of: viewModel.expenses) { _ in
+            .onChange(of: viewModel.expenses) {
                 analyticsViewModel.updateExpenses(viewModel.expenses)
             }
             .sheet(item: $selectedExpenseToEdit) { expenseToEdit in

@@ -48,7 +48,7 @@ struct CategoryButton: View {
     }
 }
 
-#Preview {
+#Preview(traits: .sizeThatFitsLayout) {
     HStack(spacing: 20) {
         CategoryButton(
             category: .food,
@@ -62,5 +62,4 @@ struct CategoryButton: View {
         )
     }
     .padding()
-    .previewLayout(.sizeThatFits)
 } 
