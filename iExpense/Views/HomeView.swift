@@ -53,8 +53,6 @@ struct HomeView: View {
                         }
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(Color.accentColor)
-                        .foregroundColor(.white)
                         .cornerRadius(20)
                     }
                 }
