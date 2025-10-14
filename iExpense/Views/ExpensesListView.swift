@@ -388,7 +388,7 @@ struct ExpensesListView: View {
                 }
                 .padding(.top, 8)
             } else {
-                Text("Add your first expense for \(Calendar.current.monthSymbols[selectedMonth - 1]) \(selectedYear)")
+                Text("Add your first expense for \(Calendar.current.monthSymbols[selectedMonth - 1]) \(String(selectedYear))")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
