@@ -8,11 +8,13 @@
 import SwiftUI
 
 /// Available analytics tabs
-enum AnalyticsTab {
-    case overview
-    case trends
-    case insights
-    case budget
+enum AnalyticsTab: String, CaseIterable, Identifiable {
+    case overview = "Overview"
+    case trends = "Trends"
+    case insights = "Insights"
+    case budget = "Budget"
+    
+    var id: Self { self }
 }
 
 /// Reusable tab selector for analytics view
@@ -20,39 +22,14 @@ struct AnalyticsTabSelector: View {
     @Binding var selectedTab: AnalyticsTab
     
     var body: some View {
-        HStack(spacing: 2) {
-            tabButton(title: "Overview", tab: .overview)
-            tabButton(title: "Trends", tab: .trends)
-            tabButton(title: "Insights", tab: .insights)
-            tabButton(title: "Budget", tab: .budget)
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 4)
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(10)
-    }
-    
-    private func tabButton(title: String, tab: AnalyticsTab) -> some View {
-        Button(action: {
-            withAnimation {
-                selectedTab = tab
+        Picker("Select a tab", selection: $selectedTab) {
+            ForEach(AnalyticsTab.allCases) { tab in
+                Text(tab.rawValue)
+                    .tag(tab)
             }
-        }) {
-            Text(title)
-                .font(.caption)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .fontWeight(selectedTab == tab ? .semibold : .regular)
-                .padding(.vertical, 8)
-                .padding(.horizontal, 6)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(selectedTab == tab ? Color.accentColor : Color.clear)
-                )
-                .foregroundColor(selectedTab == tab ? .white : .primary)
         }
-        .buttonStyle(PlainButtonStyle())
-        .frame(maxWidth: .infinity)
+        .pickerStyle(.segmented)
+//        .padding()
     }
 }
 
