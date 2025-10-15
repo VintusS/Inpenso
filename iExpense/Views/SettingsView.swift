@@ -7,7 +7,8 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct SettingsView: View {
-    @StateObject private var viewModel = SettingsViewModel()
+    @EnvironmentObject var settingsManager: SettingsViewModel
+    
     @State private var showingImportFilePicker = false
     @State private var showingExportShareSheet = false
     @State private var exportURL: URL? = nil
@@ -73,7 +74,7 @@ struct SettingsView: View {
     }
     
     private var themePicker: some View {
-        Picker("Theme", selection: $viewModel.selectedTheme) {
+        Picker("Theme", selection: $settingsManager.selectedTheme) {
             ForEach(AppTheme.allCases) { theme in
                 Text(theme.displayName).tag(theme)
             }
@@ -88,7 +89,7 @@ struct SettingsView: View {
     }
     
     private var currencyPicker: some View {
-        Picker("Currency", selection: $viewModel.selectedCurrency) {
+        Picker("Currency", selection: $settingsManager.selectedCurrency) {
             ForEach(availableCurrencies, id: \.code) { currency in
                 currencyRow(for: currency)
             }
@@ -108,7 +109,7 @@ struct SettingsView: View {
     }
     
     private var categoryPicker: some View {
-        Picker("Default Category", selection: $viewModel.defaultCategory) {
+        Picker("Default Category", selection: $settingsManager.defaultCategory) {
             ForEach(Category.allCases, id: \.self) { category in
                 categoryRow(for: category)
             }
@@ -179,7 +180,7 @@ struct SettingsView: View {
             allowsMultipleSelection: false
         ) { urls in
             guard let url = urls.first else { return }
-            let success = viewModel.importData(from: url)
+            let success = settingsManager.importData(from: url)
             if success {
                 showingImportSuccess = true
             } else {
@@ -200,13 +201,13 @@ struct SettingsView: View {
         Group {
             Button("Cancel", role: .cancel) { }
             Button("Reset", role: .destructive) {
-                viewModel.resetAllData()
+                settingsManager.resetAllData()
             }
         }
     }
     
     private func exportData() {
-        if let url = viewModel.exportData() {
+        if let url = settingsManager.exportData() {
             exportURL = url
             showingExportShareSheet = true
             showingExportSuccess = true
@@ -260,4 +261,5 @@ struct ShareSheet: UIViewControllerRepresentable {
 
 #Preview {
     SettingsView()
+        .environmentObject(SettingsViewModel())
 }

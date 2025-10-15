@@ -15,6 +15,8 @@ struct iExpenseApp: App {
         syncSettingsToSharedDefaults()
     }
     
+    @StateObject private var settingsViewModel = SettingsViewModel()
+    
     var body: some Scene {
         WindowGroup {
             MainTabView()
@@ -24,6 +26,8 @@ struct iExpenseApp: App {
                 .task {
                     await SwiftDataProvider.shared.startMigration()
                 }
+                .environmentObject(settingsViewModel)
+                .preferredColorScheme(settingsViewModel.selectedTheme.colorScheme)
         }
     }
     
