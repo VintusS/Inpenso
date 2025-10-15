@@ -23,17 +23,10 @@ struct HomeView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
-                    // Header summary card
                     headerCard
                         .padding(.top, 10)
-                    
-                    // Recent spending trend
                     recentSpendingCard
-                    
-                    // Category breakdown
                     categoryBreakdownCard
-                    
-                    // Recent expenses section
                     recentExpensesSection
                 }
                 .padding(.horizontal)
@@ -160,6 +153,9 @@ struct HomeView: View {
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                         .padding(.vertical)
+                        .transaction { transaction in
+                            transaction.animation = nil
+                        }
                 } else {
                     // Find max value for better scaling
                     let maxValue = recentSpending.map { $0.amount }.max() ?? 0
@@ -328,18 +324,19 @@ struct HomeView: View {
                         showRecentExpenses.toggle()
                     }
                 }) {
-                    Label(showRecentExpenses ? "Hide" : "Show", systemImage: showRecentExpenses ? "chevron.up" : "chevron.down")
+                    Label(showRecentExpenses ? "Hide " : "Show", systemImage: showRecentExpenses ? "chevron.up" : "chevron.down")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
+//            .padding()
             
             if showRecentExpenses {
                 if viewModel.expenses.isEmpty {
                     Text("No expenses yet")
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.vertical)
+                    
                 } else {
                     // Show most recent 5 expenses
                     let recentExpenses = viewModel.expenses.sorted { $0.date > $1.date }.prefix(5)
