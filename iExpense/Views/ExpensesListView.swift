@@ -398,12 +398,22 @@ struct ExpensesListView: View {
                     let newExpense = Expense(title: "", price: 0, date: Date(), category: .food)
                     selectedExpenseToEdit = newExpense
                 }) {
-                    Label("Add Expense", systemImage: "plus")
-                        .foregroundColor(.white)
-                        .padding(.vertical, 10)
-                        .padding(.horizontal, 20)
-                        .background(Color.accentColor)
-                        .cornerRadius(10)
+                    let addExpenseLabel: some View =
+                        Label("Add Expense", systemImage: "plus")
+                            .foregroundColor(.white)
+                            .padding(.vertical, 10)
+                            .padding(.horizontal, 20)
+                            .cornerRadius(10)
+                    
+                    if #available(iOS 26.0, *) {
+                        addExpenseLabel
+                            .glassEffect(.regular.tint(.blue).interactive())
+                        
+                    } else {
+                        addExpenseLabel
+                            .background(Color.accentColor)
+
+                    }
                 }
                 .padding(.top, 8)
             }
