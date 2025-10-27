@@ -389,17 +389,25 @@ struct HomeView: View {
                         // Use NotificationCenter to notify MainTabView to switch to expenses tab
                         NotificationCenter.default.post(name: NSNotification.Name("SwitchToExpensesTab"), object: nil)
                     }) {
-                        Text("View All Expenses")
+                        let viewAllExpensesButton: some View = Text("View All Expenses")
                             .font(.subheadline)
                             .fontWeight(.medium)
-                            .foregroundColor(.accentColor)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.accentColor, lineWidth: 1.5)
-                            )
-                            .padding(.top, 8)
+                        
+                        if #available(iOS 26.0, *) {
+                            viewAllExpensesButton
+                                .foregroundColor(.white)
+                                .glassEffect(.regular.tint(.blue).interactive())
+                        } else {
+                            viewAllExpensesButton
+                                .foregroundColor(.blue)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.accentColor, lineWidth: 1.5)
+                                )
+                                .padding(.top, 8)
+                        }
                     }
                 }
             }

@@ -58,12 +58,21 @@ struct BudgetInputView: View {
                 }
 
                 Button(action: onSave) {
-                    Text("Save Budget")
+                    let saveBudgetButton: some View = Text("Save Budget")
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
+                        .foregroundColor(.white)
+                    
+                    if #available(iOS 26.0, *) {
+                        saveBudgetButton
+                            .glassEffect(.regular.tint(.blue).interactive())
+                    } else {
+                        saveBudgetButton
+                            .background(Color.blue.opacity(0.8))
+                            .cornerRadius(12)
+                    }
                 }
-                .buttonStyle(.borderedProminent)
             }
             .padding()
             .background(
