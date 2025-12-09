@@ -34,7 +34,6 @@ class SwiftDataProvider {
     }
     
     // Start the migration process
-    @MainActor
     func startMigration() async {
         guard let container = container else { return }
         

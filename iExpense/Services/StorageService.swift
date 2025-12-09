@@ -8,7 +8,7 @@
 import Foundation
 
 struct StorageService {
-    static let appGroupID = "group.com.vintuss.Inpenso"
+    static let appGroupID = "group.com.vintuss.iexpense"
 
     private static var userDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupID)

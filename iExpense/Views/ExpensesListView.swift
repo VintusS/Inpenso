@@ -11,6 +11,7 @@ struct ExpensesListView: View {
 
     @State private var selectedMonth: Int = Calendar.current.component(.month, from: Date())
     @State private var selectedYear: Int = Calendar.current.component(.year, from: Date())
+    @State private var selectedDateIndex: Int = 0
     @State private var recentlyDeletedExpenses: [Expense] = []
     @State private var showUndoSnackbar: Bool = false
     @State private var undoTimer: Timer? = nil
@@ -24,8 +25,9 @@ struct ExpensesListView: View {
     
     // Animation states
     @State private var isListLoaded = false
-    
-    private let monthHistoryLength = 61 // include current month plus ~5 years of history
+
+    private let monthsPerYear = 12
+    private let yearRange = 5
 
     enum SortOption: String, CaseIterable, Identifiable {
         case dateDescending = "Newest First"
@@ -192,6 +194,7 @@ struct ExpensesListView: View {
                 refreshExpenses()
             }
             .onAppear {
+                syncSelectedDateIndex()
                 analyticsViewModel.updateExpenses(viewModel.expenses)
                 
                 // Animate list appearance
@@ -256,15 +259,60 @@ struct ExpensesListView: View {
     // MARK: - Month-Year Picker
     
     private var monthYearPicker: some View {
-        MonthYearPicker(
-            selectedMonth: $selectedMonth,
-            selectedYear: $selectedYear,
-            monthsToShow: monthHistoryLength
-        )
-        .padding(.horizontal)
+        VStack(spacing: 0) {
+            TabView(selection: $selectedDateIndex) {
+                ForEach(generateMonthYearList().indices, id: \.self) { index in
+                    let monthYear = generateMonthYearList()[index]
+                    let month = monthYear.month
+                    let year = monthYear.year
+                    
+                    HStack(spacing: 8) {
+                        Text(Calendar.current.monthSymbols[month - 1])
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text(String(year))
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                    .tag(index)
+                }
+            }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(height: 50)
+            .onChange(of: selectedDateIndex) { oldValue, newIndex in
+                let monthYearList = generateMonthYearList()
+                let today = Date()
+                let calendar = Calendar.current
+                let todayMonth = calendar.component(.month, from: today)
+                let todayYear = calendar.component(.year, from: today)
+                
+                if let todayIndex = monthYearList.firstIndex(where: { $0.month == todayMonth && $0.year == todayYear }) {
+                    if newIndex > todayIndex {
+                        selectedDateIndex = todayIndex
+                        triggerErrorHaptic()
+                    } else {
+                        let monthYear = monthYearList[newIndex]
+                        selectedMonth = monthYear.month
+                        selectedYear = monthYear.year
+                        triggerHaptic()
+                    }
+                }
+            }
+            
+            // Month indicator dots
+            HStack(spacing: 4) {
+                ForEach(1...12, id: \.self) { month in
+                    Circle()
+                        .fill(month == selectedMonth ? Color.accentColor : Color.gray.opacity(0.3))
+                        .frame(width: 6, height: 6)
+                }
+            }
+            .padding(.bottom, 8)
+        }
     }
-
-
     
     // MARK: - Summary Card
     
@@ -388,7 +436,7 @@ struct ExpensesListView: View {
                 }
                 .padding(.top, 8)
             } else {
-                Text("Add your first expense for \(Calendar.current.monthSymbols[selectedMonth - 1]) \(String(selectedYear))")
+                Text("Add your first expense for \(Calendar.current.monthSymbols[selectedMonth - 1]) \(selectedYear)")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -398,22 +446,12 @@ struct ExpensesListView: View {
                     let newExpense = Expense(title: "", price: 0, date: Date(), category: .food)
                     selectedExpenseToEdit = newExpense
                 }) {
-                    let addExpenseLabel: some View =
-                        Label("Add Expense", systemImage: "plus")
-                            .foregroundColor(.white)
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 20)
-                            .cornerRadius(10)
-                    
-                    if #available(iOS 26.0, *) {
-                        addExpenseLabel
-                            .glassEffect(.regular.tint(.blue).interactive())
-                        
-                    } else {
-                        addExpenseLabel
-                            .background(Color.accentColor)
-
-                    }
+                    Label("Add Expense", systemImage: "plus")
+                        .foregroundColor(.white)
+                        .padding(.vertical, 10)
+                        .padding(.horizontal, 20)
+                        .background(Color.accentColor)
+                        .cornerRadius(10)
                 }
                 .padding(.top, 8)
             }
@@ -422,6 +460,36 @@ struct ExpensesListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
+    // MARK: - Helper Functions
+    
+    private func generateMonthYearList() -> [(month: Int, year: Int)] {
+        let currentYear = Calendar.current.component(.year, from: Date())
+        var monthsYears: [(Int, Int)] = []
+
+        for year in (currentYear - yearRange)...(currentYear + yearRange) {
+            for month in 1...monthsPerYear {
+                monthsYears.append((month, year))
+            }
+        }
+        return monthsYears
+    }
+
+    private func syncSelectedDateIndex() {
+        let currentYear = Calendar.current.component(.year, from: Date())
+        let currentMonth = Calendar.current.component(.month, from: Date())
+        selectedDateIndex = (currentYear - (Calendar.current.component(.year, from: Date()) - yearRange)) * monthsPerYear + (currentMonth - 1)
+    }
+
+    private func triggerHaptic() {
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
+    }
+
+    private func triggerErrorHaptic() {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(.error)
+    }
+
     private func refreshExpenses() {
         viewModel.loadExpenses()
     }

@@ -138,23 +138,15 @@ struct EditExpenseView: View {
                                 HapticFeedback.success()
                                 dismiss()
                             }) {
-                                let saveButton: some View = HStack {
+                                HStack {
                                     Image(systemName: "checkmark.circle.fill")
                                     Text("Save Changes")
                                 }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
-                                
-                                if #available(iOS 26.0, *) {
-                                    saveButton
-                                        .glassEffect(.regular.tint(.blue).interactive())
-                                } else {
-                                    saveButton
-                                        .background(Color.blue.opacity(0.8))
-                                        .cornerRadius(12)
-                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.accentColor)
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
                             }
                             
                             Button(action: {
@@ -163,22 +155,15 @@ struct EditExpenseView: View {
                                 HapticFeedback.impact(style: .medium)
                                 dismiss()
                             }) {
-                                let deleteButton: some View = HStack {
+                                HStack {
                                     Image(systemName: "trash.fill")
                                     Text("Delete Expense")
                                 }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
-                                if #available(iOS 26.0, *) {
-                                    deleteButton
-                                        .glassEffect(.regular.tint(.red).interactive())
-                                } else {
-                                    deleteButton
-                                        .background(Color.red.opacity(0.8))
-                                        .cornerRadius(12)
-                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.red.opacity(0.8))
+                                .foregroundColor(.white)
+                                .cornerRadius(12)
                             }
                         }
                         .padding(.top, 10)

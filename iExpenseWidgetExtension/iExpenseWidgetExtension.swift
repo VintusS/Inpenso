@@ -7,7 +7,7 @@ import AppIntents
 import Foundation
 
 // Global app group ID for consistency - must match StorageService.appGroupID
-let appGroupID = "group.com.vintuss.Inpenso"
+let appGroupID = "group.com.vintuss.iexpense"
 
 // Global function to get currency code from shared UserDefaults
 func getAppCurrency() -> String {
@@ -205,9 +205,9 @@ struct iExpenseWidgetEntryView: View {
                     .minimumScaleFactor(0.6)
                     .foregroundColor(entry.overBudget ? .red : .primary)
                     .shadow(color: Color.black.opacity(0.05), radius: 1, x: 0, y: 1)
-                
+                    
                 // Budget indicator if budget exists
-                if entry.monthlyBudget > 0 {
+                    if entry.monthlyBudget > 0 {
                     HStack(spacing: 4) {
                         Circle()
                             .fill(entry.overBudget ? .red : .green)
@@ -218,14 +218,14 @@ struct iExpenseWidgetEntryView: View {
                             .foregroundColor(entry.overBudget ? .red : .green)
                     }
                     .padding(.bottom, 2)
-                } else {
+                    } else {
                     Text("This Month")
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                         .padding(.bottom, 2)
                 }
-                
-                Spacer()
+                    
+                    Spacer()
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
@@ -237,12 +237,12 @@ struct iExpenseWidgetEntryView: View {
         HStack(spacing: 16) {
             // Left section - Monthly spending amount
             VStack(alignment: .leading, spacing: 4) {
-                Text(entry.totalSpent, format: .currency(code: currencyCode))
+                        Text(entry.totalSpent, format: .currency(code: currencyCode))
                     .font(.system(.title, design: .rounded))
-                    .fontWeight(.bold)
+                            .fontWeight(.bold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                    .foregroundColor(entry.overBudget ? .red : .primary)
+                            .foregroundColor(entry.overBudget ? .red : .primary)
                 
                 Text("spent this month")
                     .font(.caption)
@@ -254,10 +254,10 @@ struct iExpenseWidgetEntryView: View {
             if entry.monthlyBudget > 0 {
                 ZStack {
                     // Background circle
-                    Circle()
+                                Circle()
                         .stroke(Color(.systemGray5), lineWidth: 8)
                         .frame(width: 80, height: 80)
-                    
+                                
                     // Progress circle
                     Circle()
                         .trim(from: 0, to: entry.budgetProgress)
@@ -278,8 +278,8 @@ struct iExpenseWidgetEntryView: View {
                         Text("of budget")
                             .font(.caption2)
                             .foregroundColor(.secondary)
-                    }
                 }
+            }
                 .frame(width: 100, height: 100)
             }
         }
@@ -290,17 +290,17 @@ struct iExpenseWidgetEntryView: View {
     var largeWidget: some View {
         VStack {
             // Top - Monthly spending
-            Text(entry.totalSpent, format: .currency(code: currencyCode))
+                    Text(entry.totalSpent, format: .currency(code: currencyCode))
                 .font(.system(.largeTitle, design: .rounded))
-                .fontWeight(.bold)
+                        .fontWeight(.bold)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .foregroundColor(entry.overBudget ? .red : .primary)
+                        .foregroundColor(entry.overBudget ? .red : .primary)
             
             Text("spent this month")
                 .font(.headline)
                 .foregroundColor(.secondary)
-            
+                
             // Budget visualization if available
             if entry.monthlyBudget > 0 {
                 Spacer()
@@ -339,7 +339,7 @@ struct iExpenseWidgetEntryView: View {
                                 .fontWeight(.bold)
                                 .foregroundColor(.green)
                         }
-                        
+                            
                         Text("\(Int(entry.budgetProgress * 100))% used")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
@@ -363,11 +363,11 @@ struct iExpenseWidgetEntryView: View {
                     
                     Text("No budget set for this month")
                         .font(.title3)
-                        .foregroundColor(.secondary)
-                }
+                                        .foregroundColor(.secondary)
+                                }
                 .padding()
-                
-                Spacer()
+                    
+                    Spacer()
             }
         }
         .padding(16)

@@ -15,8 +15,9 @@ import SwiftData
 
 // Using typealiases to reference the SwiftData models
 // This prevents redeclaration errors with the original models
-private typealias SDExpenseItem = ExpenseItem
-private typealias SDBudgetItem = BudgetItem
+// Note: These are internal since the underlying types are internal
+typealias SDExpenseItem = ExpenseItem
+typealias SDBudgetItem = BudgetItem
 
 // MARK: - SwiftData Extensions
 

@@ -95,11 +95,20 @@ class SettingsViewModel: ObservableObject {
             sharedDefaults?.synchronize()
         }
         
-        let savedCategory = UserDefaults.standard.string(forKey: "defaultCategory")
-        self.defaultCategory = Category(rawValue: savedCategory ?? "food") ?? .food
+        // Load other settings from standard UserDefaults
+        if let savedCategoryString = UserDefaults.standard.string(forKey: "defaultCategory"),
+           let savedCategory = Category(rawValue: savedCategoryString) {
+            self.defaultCategory = savedCategory
+        } else {
+            self.defaultCategory = .food
+        }
         
-        let savedTheme = UserDefaults.standard.string(forKey: "selectedTheme")
-        self.selectedTheme = AppTheme(rawValue: savedTheme ?? "system") ?? .system
+        if let savedThemeString = UserDefaults.standard.string(forKey: "selectedTheme"),
+           let savedTheme = AppTheme(rawValue: savedThemeString) {
+            self.selectedTheme = savedTheme
+        } else {
+            self.selectedTheme = .system
+        }
     }
     
     func exportData() -> URL? {
@@ -166,4 +175,4 @@ func getSettingsCurrencySymbol() -> String {
         return currency.symbol
     }
     return "$" // Default fallback
-}
+} 

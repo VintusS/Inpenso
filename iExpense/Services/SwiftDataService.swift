@@ -20,14 +20,14 @@ struct SwiftDataService {
         Task { @MainActor in
             guard let container = try? SwiftDataManager.shared.createContainer() else {
                 print("Failed to create container for quick expense")
-                return
-            }
-            
+            return
+        }
+        
             let context = container.mainContext
             
             // Create the regular Expense model for UserDefaults
             let expense = Expense(title: title, price: price, date: date, category: category)
-            
+        
             // Let SwiftDataManager handle SwiftData operations
             try? SwiftDataManager.shared.saveExpense(expense, using: context)
             
@@ -53,15 +53,15 @@ struct SwiftDataService {
                 let expenses = try context.fetch(expenseDescriptor)
                 for expense in expenses {
                     context.delete(expense)
-                }
-                
+    }
+    
                 // Delete all budgets
                 let budgetDescriptor = FetchDescriptor<BudgetItem>()
                 let budgets = try context.fetch(budgetDescriptor)
                 for budget in budgets {
                     context.delete(budget)
-                }
-                
+        }
+        
                 try context.save()
                 
                 // Also clear UserDefaults for backward compatibility

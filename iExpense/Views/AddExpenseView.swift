@@ -70,14 +70,8 @@ struct AddExpenseView: View {
                         notesCard
                         
                         // Save Button
-                        if #available(iOS 26.0, *) {
-                            saveButton
-                                .glassEffect(isFormValid() ? .regular.tint(.blue).interactive() : .regular.tint(.gray))
-                        } else {
-                            saveButton
-                                .background(isFormValid() ? Color.accentColor : Color.gray)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
+                        saveButton
+                            .padding(.vertical, 10)
                     }
                     .padding(.horizontal)
                     .padding(.top, 10)
@@ -176,35 +170,16 @@ struct AddExpenseView: View {
             HStack {
                 Spacer()
                 Text("Save Expense")
+                    .fontWeight(.bold)
                 Spacer()
             }
             .padding()
+            .background(isFormValid() ? Color.accentColor : Color.gray)
             .foregroundColor(.white)
-            
-//            HStack {
-//                Spacer()
-//                Text("Save Expense")
-//                    .fontWeight(.bold)
-//                Spacer()
-//            }
-//            .padding()
-//            .background(isFormValid() ? Color.accentColor : Color.gray)
-//            .foregroundColor(.white)
-//            .cornerRadius(16)
+            .cornerRadius(16)
         }
         .disabled(!isFormValid())
     }
-    
-//    let saveButton: some View =
-//    
-//    if #available(iOS 26.0, *) {
-//        saveButton
-//            .glassEffect(.regular.tint(.blue).interactive())
-//    } else {
-//        saveButton
-//            .background(Color.blue.opacity(0.8))
-//            .cornerRadius(12)
-//    }
     
     // MARK: - Success Overlay
     

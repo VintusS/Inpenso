@@ -11,7 +11,8 @@ import SwiftData
 struct MainTabView: View {
     @StateObject private var viewModel = ExpenseViewModel()
     @StateObject private var analyticsViewModel = AnalyticsViewModel(expenses: [])
-    @EnvironmentObject private var settingsViewModel: SettingsViewModel
+    @StateObject private var settingsViewModel = SettingsViewModel()
+    @State private var colorScheme: ColorScheme?
     @State private var selectedTab = 0
 
     var body: some View {
@@ -42,22 +43,29 @@ struct MainTabView: View {
                     .tag(3)
             }
         }
-        .preferredColorScheme(settingsViewModel.selectedTheme.colorScheme)
+        .preferredColorScheme(colorScheme)
         .onAppear {
             analyticsViewModel.updateExpenses(viewModel.expenses)
+            updateColorScheme()
             
             // Register for the notification to switch tabs
             NotificationCenter.default.addObserver(forName: NSNotification.Name("SwitchToExpensesTab"), object: nil, queue: .main) { _ in
                 selectedTab = 2 // Switch to Expenses tab
             }
         }
-        .onChange(of: viewModel.expenses) {
-            analyticsViewModel.updateExpenses(viewModel.expenses)
+        .onChange(of: viewModel.expenses) { oldValue, newExpenses in
+            analyticsViewModel.updateExpenses(newExpenses)
         }
+        .onChange(of: settingsViewModel.selectedTheme) {
+            updateColorScheme()
+        }
+    }
+    
+    private func updateColorScheme() {
+        colorScheme = settingsViewModel.selectedTheme.colorScheme
     }
 }
 
 #Preview {
     MainTabView()
-        .environmentObject(SettingsViewModel())
 }

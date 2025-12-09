@@ -1,10 +1,3 @@
-//
-//  DatePickerCard.swift
-//  iExpense
-//
-//  Created by Dragomir Mindrescu on 27.04.2025.
-//
-
 import SwiftUI
 
 /// An expandable date picker with toggle functionality
@@ -55,24 +48,24 @@ struct DatePickerCard: View {
                     
                     // Date picker
                     Group {
-                        if let range = dateRange {
-                            DatePicker("", selection: $selectedDate, in: range, displayedComponents: .date)
-                                .datePickerStyle(GraphicalDatePickerStyle())
-                                .labelsHidden()
-                                .padding(.horizontal)
-                                .onChange(of: selectedDate) {
-                                    HapticFeedback.selection()
-                                }
-                        } else {
-                            DatePicker("", selection: $selectedDate, in: ...maxDate, displayedComponents: .date)
-                                .datePickerStyle(GraphicalDatePickerStyle())
-                                .labelsHidden()
-                                .padding(.horizontal)
-                                .onChange(of: selectedDate) {
-                                    HapticFeedback.selection()
-                                }
-                        }
+                    if let range = dateRange {
+                        DatePicker("", selection: $selectedDate, in: range, displayedComponents: .date)
+                            .datePickerStyle(GraphicalDatePickerStyle())
+                            .labelsHidden()
+                            .padding(.horizontal)
+                            .onChange(of: selectedDate) {
+                                HapticFeedback.selection()
+                            }
+                    } else {
+                        DatePicker("", selection: $selectedDate, in: ...maxDate, displayedComponents: .date)
+                            .datePickerStyle(GraphicalDatePickerStyle())
+                            .labelsHidden()
+                            .padding(.horizontal)
+                            .onChange(of: selectedDate) {
+                                HapticFeedback.selection()
+                            }
                     }
+                }
                     .opacity(isExpanded ? 1 : 0)
                     .frame(height: isExpanded ? nil : 0, alignment: .top)
                 }

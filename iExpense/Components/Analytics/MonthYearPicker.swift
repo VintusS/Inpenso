@@ -1,10 +1,3 @@
-//
-//  MonthYearPicker.swift
-//  iExpense
-//
-//  Created by Dragomir Mindrescu on 27.04.2025.
-//
-
 import SwiftUI
 
 /// A month-year pair for date selection
@@ -32,8 +25,7 @@ struct MonthYear: Identifiable, Equatable {
 struct MonthYearPicker: View {
     @Binding var selectedMonth: Int
     @Binding var selectedYear: Int
-    private let monthYearList: [MonthYear]
-    private let allowFutureMonths: Bool
+    var monthYearList: [MonthYear]
     var onMonthYearChanged: (() -> Void)? = nil
     
     @State private var selectedIndex: Int = 0
@@ -42,21 +34,18 @@ struct MonthYearPicker: View {
         selectedMonth: Binding<Int>,
         selectedYear: Binding<Int>,
         monthsToShow: Int = 36,
-        allowFutureMonths: Bool = false,
         onMonthYearChanged: (() -> Void)? = nil
     ) {
         self._selectedMonth = selectedMonth
         self._selectedYear = selectedYear
         self.onMonthYearChanged = onMonthYearChanged
-        self.allowFutureMonths = allowFutureMonths
         
         // Generate the month-year list
         var list: [MonthYear] = []
-        let totalMonths = max(monthsToShow, 1)
         let calendar = Calendar.current
         if let today = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: Date()) {
             // Start from the oldest month and go towards the newest
-            for i in (0..<totalMonths).reversed() {
+            for i in (0..<monthsToShow).reversed() {
                 if let date = calendar.date(byAdding: .month, value: -i, to: today) {
                     let month = calendar.component(.month, from: date)
                     let year = calendar.component(.year, from: date)
@@ -72,96 +61,72 @@ struct MonthYearPicker: View {
     }
     
     var body: some View {
-        HStack {
-            // MARK: - Left Arrow Button
-            if(selectedIndex > 0) {
-                Button(action: {
-                    if selectedIndex > 0 {
-                        selectedIndex -= 1
+        VStack(spacing: 0) {
+            TabView(selection: $selectedIndex) {
+                ForEach(Array(monthYearList.enumerated()), id: \.element.id) { index, monthYear in
+                    HStack(spacing: 8) {
+                        Text(Calendar.current.monthSymbols[monthYear.month - 1])
+                            .font(.title2)
+                            .fontWeight(.bold)
+                        
+                        Text(String(monthYear.year))
+                            .font(.title3)
+                            .foregroundColor(.secondary)
                     }
-                }) {
-                    Image(systemName: "chevron.left")
-                        .font(.title2)
-                        .foregroundColor(.primary.opacity(selectedIndex > 0 ? 1 : 0))
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
+                    .tag(index)
                 }
-                .disabled(selectedIndex == 0)
             }
-            
-            VStack(spacing: 0) {
-                TabView(selection: $selectedIndex) {
-                    ForEach(Array(monthYearList.enumerated()), id: \.element.id) { index, monthYear in
-                        HStack(spacing: 8) {
-                            Text(Calendar.current.monthSymbols[monthYear.month - 1])
-                                .font(.title2)
-                                .fontWeight(.bold)
-                            
-                            Text(String(monthYear.year))
-                                .font(.title3)
-                                .foregroundColor(.secondary)
-                        }
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: .infinity)
-                        .tag(index)
-                    }
-                }
-                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                .frame(height: 50)
-                .onChange(of: selectedIndex) {
-                    guard monthYearList.indices.contains(selectedIndex) else { return }
-                    let monthYear = monthYearList[selectedIndex]
-                    
-                    // Prevent selecting future months
-                    if !allowFutureMonths && monthYear.isFuture() {
-                        // Revert to previous selection
-                        selectedIndex = monthYearList.firstIndex(where: { $0.month == selectedMonth && $0.year == selectedYear }) ?? 0
-                        HapticFeedback.error()
-                    } else {
-                        // Update selection
-                        selectedMonth = monthYear.month
-                        selectedYear = monthYear.year
-                        HapticFeedback.selection()
-                        onMonthYearChanged?()
-                    }
-                }
+            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            .frame(height: 50)
+            .onChange(of: selectedIndex) { oldValue, newIndex in
+                let monthYear = monthYearList[newIndex]
                 
-                // Month indicator dots just like in ExpensesListView
-                HStack(spacing: 4) {
-                    ForEach(1...12, id: \.self) { month in
-                        Circle()
-                            .fill(month == selectedMonth ? Color.accentColor : Color.gray.opacity(0.3))
-                            .frame(width: 6, height: 6)
-                    }
-                }
-                .padding(.bottom, 8)
-            }
-            .onAppear {
-                // Synchronize the picker with the current selection
-                if let index = monthYearList.firstIndex(where: { $0.month == selectedMonth && $0.year == selectedYear }) {
-                    selectedIndex = index
+                // Prevent selecting future months
+                if monthYear.isFuture() {
+                    // Revert to previous selection
+                    selectedIndex = monthYearList.firstIndex(where: { $0.month == selectedMonth && $0.year == selectedYear }) ?? 0
+                    HapticFeedback.error()
+                } else {
+                    // Update selection
+                    selectedMonth = monthYear.month
+                    selectedYear = monthYear.year
+                    HapticFeedback.selection()
+                    onMonthYearChanged?()
                 }
             }
             
-            // MARK: - Right Arrow Button
-            Button(action: {
-                if selectedIndex < monthYearList.count - 1 {
-                    selectedIndex += 1
+            // Month indicator dots just like in ExpensesListView
+            HStack(spacing: 4) {
+                ForEach(1...12, id: \.self) { month in
+                    Circle()
+                        .fill(month == selectedMonth ? Color.accentColor : Color.gray.opacity(0.3))
+                        .frame(width: 6, height: 6)
                 }
-            }) {
-                Image(systemName: "chevron.right")
-                    .font(.title2)
-                    .foregroundColor(.primary.opacity(selectedIndex < monthYearList.count - 1 ? 1 : 0))
             }
-            .disabled(selectedIndex == monthYearList.count - 1 )
+            .padding(.bottom, 8)
+        }
+        .onAppear {
+            // Synchronize the picker with the current selection
+            if let index = monthYearList.firstIndex(where: { $0.month == selectedMonth && $0.year == selectedYear }) {
+                selectedIndex = index
+            }
         }
     }
 }
 
-#Preview(traits: .sizeThatFitsLayout) {
+#Preview {
     VStack(spacing: 20) {
         MonthYearPicker(
             selectedMonth: .constant(Calendar.current.component(.month, from: Date())),
             selectedYear: .constant(Calendar.current.component(.year, from: Date()))
         )
+        
+        Text("Select a month by swiping")
+            .font(.caption)
+            .foregroundColor(.secondary)
     }
     .padding()
-}
+    .previewLayout(.sizeThatFits)
+} 
