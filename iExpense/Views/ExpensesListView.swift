@@ -272,7 +272,7 @@ struct ExpensesListView: View {
         VStack(spacing: 16) {
             // Total amount for selected month
             HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading,     spacing: 4) {
                     Text("Total for \(Calendar.current.monthSymbols[selectedMonth - 1])")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
@@ -403,7 +403,6 @@ struct ExpensesListView: View {
                             .foregroundColor(.white)
                             .padding(.vertical, 10)
                             .padding(.horizontal, 20)
-                            .cornerRadius(10)
                     
                     if #available(iOS 26.0, *) {
                         addExpenseLabel
@@ -412,6 +411,7 @@ struct ExpensesListView: View {
                     } else {
                         addExpenseLabel
                             .background(Color.accentColor)
+                            .cornerRadius(10)
 
                     }
                 }
@@ -605,31 +605,48 @@ struct FilterCategoriesView: View {
                     }
                 }
                 
-                HStack(spacing: 12) {
-                    Button("Select All") {
-                        tempSelectedCategories = Set(Category.allCases)
-                    }
-                    .foregroundColor(.accentColor)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.accentColor, lineWidth: 1)
-                    )
-                    
-                    Button("Apply") {
-                        selectedCategories = tempSelectedCategories
-                        dismiss()
-                    }
-                    .foregroundColor(.white)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.accentColor)
-                    )
-                }
-                .padding()
+//                HStack(spacing: 12) {
+//                    Button {
+//                        tempSelectedCategories = Set(Category.allCases)
+//                    } label: {
+//                        let selectAllButton: some View = Text("Select All")
+//                            .frame(maxWidth: .infinity)
+//                            .padding(.vertical, 12)
+//                        if #available(iOS 26.0, *) {
+//                            selectAllButton
+//                                .foregroundColor(.white)
+//                                .glassEffect(.regular.tint(.blue).interactive())
+//                        } else {
+//                            selectAllButton
+//                                .foregroundColor(.accentColor)
+//                                .background(
+//                                    RoundedRectangle(cornerRadius: 10)
+//                                        .stroke(Color.accentColor, lineWidth: 1)
+//                                )
+//                        }
+//                    }
+//                    
+//                    Button {
+//                        selectedCategories = tempSelectedCategories
+//                        dismiss()
+//                    } label: {
+//                        let applyButton: some View = Text("Apply")
+//                            .foregroundColor(.white)
+//                            .padding(.vertical, 12)
+//                            .frame(maxWidth: .infinity)
+//                        if #available(iOS 26.0, *) {
+//                            applyButton
+//                                .glassEffect(.regular.tint(.blue).interactive())
+//                        } else {
+//                            applyButton
+//                                .background(
+//                                    RoundedRectangle(cornerRadius: 10)
+//                                        .fill(Color.accentColor)
+//                                )
+//                        }
+//                    }
+//                }
+//                .padding()
             }
             .navigationTitle("Filter")
             .navigationBarTitleDisplayMode(.inline)
@@ -638,6 +655,14 @@ struct FilterCategoriesView: View {
                     Button("Cancel") {
                         dismiss()
                     }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Apply") {
+                        selectedCategories = tempSelectedCategories
+                        dismiss()
+                    }
+                    
                 }
             }
         }
