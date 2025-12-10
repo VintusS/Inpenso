@@ -403,7 +403,6 @@ struct ExpensesListView: View {
                             .foregroundColor(.white)
                             .padding(.vertical, 10)
                             .padding(.horizontal, 20)
-                            .cornerRadius(10)
                     
                     if #available(iOS 26.0, *) {
                         addExpenseLabel
@@ -412,6 +411,7 @@ struct ExpensesListView: View {
                     } else {
                         addExpenseLabel
                             .background(Color.accentColor)
+                            .cornerRadius(10)
 
                     }
                 }
@@ -606,28 +606,45 @@ struct FilterCategoriesView: View {
                 }
                 
                 HStack(spacing: 12) {
-                    Button("Select All") {
+                    Button {
                         tempSelectedCategories = Set(Category.allCases)
+                    } label: {
+                        let selectAllButton: some View = Text("Select All")
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                        if #available(iOS 26.0, *) {
+                            selectAllButton
+                                .foregroundColor(.white)
+                                .glassEffect(.regular.tint(.blue).interactive())
+                        } else {
+                            selectAllButton
+                                .foregroundColor(.accentColor)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .stroke(Color.accentColor, lineWidth: 1)
+                                )
+                        }
                     }
-                    .foregroundColor(.accentColor)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(Color.accentColor, lineWidth: 1)
-                    )
                     
-                    Button("Apply") {
+                    Button {
                         selectedCategories = tempSelectedCategories
                         dismiss()
+                    } label: {
+                        let applyButton: some View = Text("Apply")
+                            .foregroundColor(.white)
+                            .padding(.vertical, 12)
+                            .frame(maxWidth: .infinity)
+                        if #available(iOS 26.0, *) {
+                            applyButton
+                                .glassEffect(.regular.tint(.blue).interactive())
+                        } else {
+                            applyButton
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.accentColor)
+                                )
+                        }
                     }
-                    .foregroundColor(.white)
-                    .padding(.vertical, 12)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(Color.accentColor)
-                    )
                 }
                 .padding()
             }
