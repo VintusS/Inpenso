@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last Updated:** January 2025
+**Last Updated:** December 2025
 
 ## Introduction
 
@@ -56,11 +56,11 @@ Your data is stored using:
 **We do not share, sell, trade, or otherwise transfer your personal information to any third parties.**
 
 Specifically:
-- ❌ No data is sent to external servers
-- ❌ No analytics or tracking services are used
-- ❌ No advertising networks receive your data
-- ❌ No third-party services have access to your information
-- ❌ No cloud backup or sync services are utilized
+- No data is sent to external servers
+- No analytics or tracking services are used
+- No advertising networks receive your data
+- No third-party services have access to your information
+- No cloud backup or sync services are utilized
 
 ### App Extensions
 
@@ -139,18 +139,17 @@ If you have any questions about this Privacy Policy or our data practices, pleas
 
 - **Email**: dmindrescu03@gmail.com
 - **GitHub**: [https://github.com/VintusS/Inpenso](https://github.com/VintusS/Inpenso)
-- **Support**: [https://github.com/VintusS/Inpenso/blob/main/SUPPORT.md](https://github.com/VintusS/Inpenso/blob/main/SUPPORT.md)
 
 ## Summary
 
 **Key Points:**
-- ✅ All data stored locally on your device
-- ✅ No data transmitted to external servers
-- ✅ No third-party services or analytics
-- ✅ Complete user control over data
-- ✅ No advertising or tracking
-- ✅ Secure encryption using iOS mechanisms
-- ✅ Data accessible only to you and the app
+- All data stored locally on your device
+- No data transmitted to external servers
+- No third-party services or analytics
+- Complete user control over data
+- No advertising or tracking
+- Secure encryption using iOS mechanisms
+- Data accessible only to you and the app
 
 Your privacy is our priority. Inpenso is designed with privacy-first principles, ensuring your financial data remains private and secure on your device.
 
