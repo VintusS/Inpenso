@@ -10,7 +10,7 @@ import Foundation
 
 struct AddExpenseSiriIntent: AppIntent {
     static var title: LocalizedStringResource = "Add an Expense"
-    static var description = IntentDescription("Quickly add a new expense to iExpense via Siri or Shortcuts.")
+    static var description = IntentDescription("Quickly add a new expense to iExpense via Voice Control or Shortcuts.")
 
     static var openAppWhenRun: Bool = false
 
