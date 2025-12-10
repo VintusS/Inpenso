@@ -271,6 +271,7 @@ struct AddExpenseView: View {
         let newExpense = viewModel.addExpense(
             title: title,
             price: priceValue,
+            date: selectedDate,
             category: selectedCategory
         )
         
