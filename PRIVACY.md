@@ -157,6 +157,6 @@ Your privacy is our priority. Inpenso is designed with privacy-first principles,
 
 **Developer:** Dragomir Mindrescu  
 **App Name:** Inpenso  
-**Version:** 1.0.4  
+**Version:** 5  
 **Platform:** iOS 18.0+
 
