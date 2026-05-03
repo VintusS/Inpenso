@@ -1,0 +1,80 @@
+# SwiftLint configuration for iExpense project
+
+disabled_rules:
+  - trailing_whitespace
+  - line_length
+  - force_unwrapping
+
+opt_in_rules:
+  - closure_end_indentation
+  - closure_spacing
+  - empty_count
+  - explicit_init
+  - extension_access_modifier
+  - fatal_error_message
+  - file_header
+  - forbidden_super_call
+  - implicit_return
+  - joined_default_parameter
+  - legacy_random
+  - missing_docs
+  - number_separator
+  - overridden_super_call
+  - prohibited_super_call
+  - redundant_nil_coalescing
+  - switch_case_on_newline
+  - unavailable_function
+  - unused_control_flow_label
+  - vertical_parameter_alignment_on_call
+
+analyzer_rules:
+  - explicit_self
+  - unused_declaration
+  - unused_import
+
+excluded:
+  - Pods
+  - Carthage
+  - .build
+  - Inpenso.xcodeproj
+  - build
+
+line_length:
+  warning: 120
+  error: 200
+
+indentation: 2
+
+type_name:
+  min_length: 3
+  max_length: 40
+
+identifier_name:
+  min_length: 1
+  max_length: 40
+
+function_parameter_count:
+  warning: 5
+  error: 8
+
+file_length:
+  warning: 500
+  error: 1000
+
+function_body_length:
+  warning: 100
+  error: 200
+
+cyclomatic_complexity:
+  warning: 10
+  error: 20
+
+nesting:
+  type_level: 2
+  function_level: 2
+
+trailing_comma:
+  mandatory_comma: true
+
+trailing_closure:
+  only_single_parameter: true

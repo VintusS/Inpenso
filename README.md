@@ -10,12 +10,12 @@ A modern, intuitive expense tracker for iOS that helps you monitor spending, set
 
 ## Features
 
-- 📊 **Smart Analytics**: Visualize your spending patterns by category, month, and trends
-- 💰 **Budget Management**: Set monthly budgets and track your progress
-- 🔔 **Home Screen Widgets**: Monitor your expenses directly from your home screen
-- 📱 **iOS Integration**: Clean SwiftUI design that follows Apple's HIG
-- 🔄 **Siri Shortcuts**: Add expenses quickly with voice commands
-- 🔒 **Privacy-Focused**: All your data stays on your device
+- **Smart Analytics**: Visualize your spending patterns by category, month, and trends
+- **Budget Management**: Set monthly budgets and track your progress
+- **Home Screen Widgets**: Monitor your expenses directly from your home screen
+- **iOS Integration**: Clean SwiftUI design that follows Apple's HIG
+- **Siri Shortcuts**: Add expenses quickly with voice commands
+- **Privacy-Focused**: All your data stays on your device
 
 ## Screenshots
 

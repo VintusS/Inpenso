@@ -1,0 +1,42 @@
+# Xcode
+DerivedData/
+build/
+*.xcarchive
+*.ipa
+*.dSYM
+xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings
+
+# CocoaPods
+Pods/
+Podfile.lock
+*.podspec
+
+# SPM
+.build/
+Packages/
+Package.resolved
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.vscode/
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.bundle
+
+# Logs
+*.log
+*.xlsx
+
+# Temporary files
+*.tmp
+.env.local
