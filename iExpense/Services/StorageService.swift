@@ -16,6 +16,7 @@ struct StorageService {
 
     private static let expensesKey = "expenses"
     private static let budgetsKey = "budgets"
+    private static let categoryCatalogStateKey = "categoryCatalogState"
     private static let customCategoriesKey = "customCategories"
 
     static func saveExpenses(_ expenses: [Expense]) {
@@ -115,6 +116,29 @@ struct StorageService {
             return try JSONDecoder().decode([FinanceCategory].self, from: data)
         } catch {
             return []
+        }
+    }
+
+    static func saveCategoryCatalogState(_ state: CategoryCatalogState) {
+        guard let userDefaults = userDefaults else { return }
+        do {
+            let data = try JSONEncoder().encode(state)
+            userDefaults.set(data, forKey: categoryCatalogStateKey)
+        } catch {
+            // Error handling without print
+        }
+    }
+
+    static func loadCategoryCatalogState() -> CategoryCatalogState? {
+        guard let userDefaults = userDefaults,
+              let data = userDefaults.data(forKey: categoryCatalogStateKey) else {
+            return nil
+        }
+
+        do {
+            return try JSONDecoder().decode(CategoryCatalogState.self, from: data)
+        } catch {
+            return nil
         }
     }
 }

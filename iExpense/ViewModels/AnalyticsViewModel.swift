@@ -401,6 +401,16 @@ class AnalyticsViewModel: ObservableObject {
     }
 
     private func categoryName(for categoryID: String) -> String {
+        if let catalogState = StorageService.loadCategoryCatalogState() {
+            let builtInCategories = FinanceCategory.builtInCategories.map { category in
+                catalogState.builtInOverrides[category.id] ?? category
+            }
+
+            if let category = (builtInCategories + catalogState.customCategories).first(where: { $0.id == categoryID }) {
+                return category.displayName
+            }
+        }
+
         if let builtInCategory = Category.category(from: categoryID) {
             return builtInCategory.displayName
         }

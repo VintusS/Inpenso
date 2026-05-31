@@ -119,6 +119,12 @@ struct SettingsView: View {
             }
         }
         .pickerStyle(.menu)
+        .onAppear {
+            normalizeDefaultCategory()
+        }
+        .onChange(of: categoryStore.allCategories.map(\.id)) { _, _ in
+            normalizeDefaultCategory()
+        }
     }
     
     private func categoryRow(for category: FinanceCategory) -> some View {
@@ -129,6 +135,13 @@ struct SettingsView: View {
             Text(category.displayName)
         }
         .tag(category.id)
+    }
+
+    private func normalizeDefaultCategory() {
+        let preferredCategoryID = categoryStore.preferredCategoryID(for: settingsManager.defaultCategoryID)
+        if preferredCategoryID != settingsManager.defaultCategoryID {
+            settingsManager.defaultCategoryID = preferredCategoryID
+        }
     }
 
     private var categoriesSection: some View {

@@ -210,6 +210,40 @@ struct FinanceCategory: Identifiable, Codable, Equatable, Hashable {
     }
 }
 
+struct CategoryCatalogState: Codable, Equatable {
+    var orderedCategoryIDs: [String]
+    var customCategories: [FinanceCategory]
+    var builtInOverrides: [String: FinanceCategory]
+    var hiddenCategoryIDs: Set<String>
+
+    init(
+        orderedCategoryIDs: [String] = [],
+        customCategories: [FinanceCategory] = [],
+        builtInOverrides: [String: FinanceCategory] = [:],
+        hiddenCategoryIDs: Set<String> = []
+    ) {
+        self.orderedCategoryIDs = orderedCategoryIDs
+        self.customCategories = customCategories
+        self.builtInOverrides = builtInOverrides
+        self.hiddenCategoryIDs = hiddenCategoryIDs
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case orderedCategoryIDs
+        case customCategories
+        case builtInOverrides
+        case hiddenCategoryIDs
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        orderedCategoryIDs = try container.decodeIfPresent([String].self, forKey: .orderedCategoryIDs) ?? []
+        customCategories = try container.decodeIfPresent([FinanceCategory].self, forKey: .customCategories) ?? []
+        builtInOverrides = try container.decodeIfPresent([String: FinanceCategory].self, forKey: .builtInOverrides) ?? [:]
+        hiddenCategoryIDs = try container.decodeIfPresent(Set<String>.self, forKey: .hiddenCategoryIDs) ?? []
+    }
+}
+
 extension Color {
     init?(hex: String) {
         var sanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)

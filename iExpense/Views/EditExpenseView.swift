@@ -90,7 +90,7 @@ struct EditExpenseView: View {
                         CardView(title: "Category") {
                             CategoryGrid(
                                 selectedCategoryID: $selectedCategoryID,
-                                categories: categoryStore.allCategories
+                                categories: categoryStore.categoriesForPicker(including: selectedCategoryID)
                             )
                                 .padding(.horizontal)
                         }

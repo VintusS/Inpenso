@@ -125,6 +125,9 @@ struct AddExpenseView: View {
             .alert(validationMessage, isPresented: $showingValidationAlert) {
                 Button("OK", role: .cancel) { }
             }
+            .onAppear {
+                selectedCategoryID = categoryStore.preferredCategoryID(for: selectedCategoryID)
+            }
         }
     }
     

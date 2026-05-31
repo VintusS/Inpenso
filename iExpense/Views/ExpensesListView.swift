@@ -109,10 +109,16 @@ struct ExpensesListView: View {
         Dictionary(grouping: filteredExpenses) { $0.categoryID }
     }
 
+    private var filterCategories: [FinanceCategory] {
+        categoryStore.categoriesForFilter(usedCategoryIDs: Set(viewModel.expenses.map(\.categoryID)))
+    }
+
+    private var filterCategoryIDs: [String] {
+        filterCategories.map(\.id)
+    }
+
     private var visibleCategoryIDs: [String] {
-        groupedExpenses.keys.sorted {
-            categoryStore.category(for: $0).displayName < categoryStore.category(for: $1).displayName
-        }
+        categoryStore.orderedCategoryIDs(for: Set(groupedExpenses.keys))
     }
 
     var body: some View {
@@ -162,7 +168,7 @@ struct ExpensesListView: View {
             .onAppear {
                 analyticsViewModel.updateExpenses(viewModel.expenses)
                 if selectedCategoryIDs.isEmpty {
-                    selectedCategoryIDs = Set(categoryStore.allCategories.map(\.id))
+                    selectedCategoryIDs = Set(filterCategoryIDs)
                 }
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -171,11 +177,8 @@ struct ExpensesListView: View {
                     }
                 }
             }
-            .onChange(of: categoryStore.allCategories.map(\.id)) { oldCategoryIDs, newCategoryIDs in
-                let oldSet = Set(oldCategoryIDs)
-                let newSet = Set(newCategoryIDs)
-                selectedCategoryIDs.formUnion(newSet.subtracting(oldSet))
-                selectedCategoryIDs = selectedCategoryIDs.intersection(newSet)
+            .onChange(of: filterCategoryIDs) { oldCategoryIDs, newCategoryIDs in
+                syncSelectedCategoryIDs(oldCategoryIDs: oldCategoryIDs, newCategoryIDs: newCategoryIDs)
             }
             .onChange(of: viewModel.expenses) {
                 analyticsViewModel.updateExpenses(viewModel.expenses)
@@ -189,7 +192,7 @@ struct ExpensesListView: View {
                 }
             }
             .sheet(isPresented: $showingFilterSheet) {
-                FilterCategoriesView(selectedCategoryIDs: $selectedCategoryIDs)
+                FilterCategoriesView(selectedCategoryIDs: $selectedCategoryIDs, categories: filterCategories)
                     .presentationDetents([.medium])
             }
             .overlay(undoSnackbar, alignment: .bottom)
@@ -242,6 +245,13 @@ struct ExpensesListView: View {
         .listStyle(.insetGrouped)
         .opacity(isListLoaded ? 1 : 0)
         .animation(.easeIn(duration: 0.3), value: isListLoaded)
+    }
+
+    private func syncSelectedCategoryIDs(oldCategoryIDs: [String], newCategoryIDs: [String]) {
+        let oldSet = Set(oldCategoryIDs)
+        let newSet = Set(newCategoryIDs)
+        selectedCategoryIDs.formUnion(newSet.subtracting(oldSet))
+        selectedCategoryIDs = selectedCategoryIDs.intersection(newSet)
     }
 
     private var toolbarFilters: some View {
@@ -388,7 +398,7 @@ struct ExpensesListView: View {
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
-            } else if selectedCategoryIDs.count < categoryStore.allCategories.count {
+            } else if selectedCategoryIDs.count < filterCategoryIDs.count {
                 Text("Try selecting more categories in the filter")
                     .font(.body)
                     .foregroundColor(.secondary)
@@ -396,7 +406,7 @@ struct ExpensesListView: View {
                     .padding(.horizontal, 40)
 
                 Button {
-                    selectedCategoryIDs = Set(categoryStore.allCategories.map(\.id))
+                    selectedCategoryIDs = Set(filterCategoryIDs)
                 } label: {
                     Text("Reset Filters")
                         .foregroundColor(.accentColor)
@@ -588,13 +598,14 @@ struct ExpenseRowView: View {
 
 struct FilterCategoriesView: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var categoryStore: CategoryStore
 
     @Binding var selectedCategoryIDs: Set<String>
+    let categories: [FinanceCategory]
     @State private var tempSelectedCategoryIDs: Set<String>
 
-    init(selectedCategoryIDs: Binding<Set<String>>) {
+    init(selectedCategoryIDs: Binding<Set<String>>, categories: [FinanceCategory]) {
         self._selectedCategoryIDs = selectedCategoryIDs
+        self.categories = categories
         self._tempSelectedCategoryIDs = State(initialValue: selectedCategoryIDs.wrappedValue)
     }
 
@@ -602,7 +613,7 @@ struct FilterCategoriesView: View {
         NavigationView {
             List {
                 Section {
-                    ForEach(categoryStore.allCategories) { category in
+                    ForEach(categories) { category in
                         HStack {
                             Image(systemName: category.iconName)
                                 .foregroundColor(.white)
@@ -698,4 +709,3 @@ struct ExpenseRowContent: View {
         .environmentObject(SettingsViewModel())
         .environmentObject(CategoryStore())
 }
-
