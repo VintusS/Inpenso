@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct CategoryGrid: View {
-    @Binding var selectedCategory: Category
+    @Binding var selectedCategoryID: String
+    let categories: [FinanceCategory]
     var onCategorySelected: (() -> Void)? = nil
     
     // Number of columns in the grid
@@ -20,13 +21,13 @@ struct CategoryGrid: View {
     
     var body: some View {
         LazyVGrid(columns: columns, spacing: 15) {
-            ForEach(Category.allCases, id: \.self) { category in
+            ForEach(categories) { category in
                 CategoryButton(
                     category: category,
-                    isSelected: selectedCategory == category,
+                    isSelected: selectedCategoryID == category.id,
                     action: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedCategory = category
+                            selectedCategoryID = category.id
                         }
                         HapticFeedback.impact()
                         onCategorySelected?()
@@ -40,8 +41,9 @@ struct CategoryGrid: View {
 
 // An alternative version with a manual callback for cases where binding isn't appropriate
 struct CategoryGridWithCallback: View {
-    let selectedCategory: Category
-    let onCategorySelected: (Category) -> Void
+    let selectedCategoryID: String
+    let categories: [FinanceCategory]
+    let onCategorySelected: (FinanceCategory) -> Void
     
     // Number of columns in the grid
     private let columns = [
@@ -52,10 +54,10 @@ struct CategoryGridWithCallback: View {
     
     var body: some View {
         LazyVGrid(columns: columns, spacing: 15) {
-            ForEach(Category.allCases, id: \.self) { category in
+            ForEach(categories) { category in
                 CategoryButton(
                     category: category,
-                    isSelected: selectedCategory == category,
+                    isSelected: selectedCategoryID == category.id,
                     action: {
                         HapticFeedback.impact()
                         onCategorySelected(category)
@@ -73,7 +75,10 @@ struct CategoryGridWithCallback: View {
             .font(.headline)
             .padding()
         
-        CategoryGrid(selectedCategory: .constant(.food))
+        CategoryGrid(
+            selectedCategoryID: .constant(Category.food.categoryID),
+            categories: FinanceCategory.builtInCategories
+        )
             .padding()
             .background(Color(.secondarySystemBackground))
             .cornerRadius(12)

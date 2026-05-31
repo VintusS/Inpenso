@@ -16,6 +16,7 @@ struct StorageService {
 
     private static let expensesKey = "expenses"
     private static let budgetsKey = "budgets"
+    private static let customCategoriesKey = "customCategories"
 
     static func saveExpenses(_ expenses: [Expense]) {
         guard let userDefaults = userDefaults else { return }
@@ -35,7 +36,29 @@ struct StorageService {
         }
         do {
             let decoder = JSONDecoder()
-            let expenses = try decoder.decode([Expense].self, from: data)
+            var expenses = try decoder.decode([Expense].self, from: data)
+            var needsSave = false
+
+            for index in expenses.indices {
+                if expenses[index].categoryID.isEmpty {
+                    expenses[index].categoryID = expenses[index].category.categoryID
+                    needsSave = true
+                }
+
+                if expenses[index].notes == nil {
+                    let notesKey = "notes_\(expenses[index].id.uuidString)"
+                    if let legacyNotes = UserDefaults.standard.string(forKey: notesKey),
+                       !legacyNotes.isEmpty {
+                        expenses[index].notes = legacyNotes
+                        needsSave = true
+                    }
+                }
+            }
+
+            if needsSave {
+                saveExpenses(expenses)
+            }
+
             return expenses
         } catch {
             // Error handling without print
@@ -70,5 +93,28 @@ struct StorageService {
     static func clearExpenses() {
         guard let userDefaults = userDefaults else { return }
         userDefaults.removeObject(forKey: expensesKey)
+    }
+
+    static func saveCustomCategories(_ categories: [FinanceCategory]) {
+        guard let userDefaults = userDefaults else { return }
+        do {
+            let data = try JSONEncoder().encode(categories)
+            userDefaults.set(data, forKey: customCategoriesKey)
+        } catch {
+            // Error handling without print
+        }
+    }
+
+    static func loadCustomCategories() -> [FinanceCategory] {
+        guard let userDefaults = userDefaults,
+              let data = userDefaults.data(forKey: customCategoriesKey) else {
+            return []
+        }
+
+        do {
+            return try JSONDecoder().decode([FinanceCategory].self, from: data)
+        } catch {
+            return []
+        }
     }
 }

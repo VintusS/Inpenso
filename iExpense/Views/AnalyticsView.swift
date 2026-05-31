@@ -9,6 +9,8 @@ import SwiftUI
 import Charts
 
 struct AnalyticsView: View {
+    @EnvironmentObject private var settingsViewModel: SettingsViewModel
+
     @ObservedObject var analyticsViewModel: AnalyticsViewModel
     @State private var selectedTab: AnalyticsTab = .overview
     @State private var showSaveBudgetSuccess: Bool = false
@@ -22,6 +24,10 @@ struct AnalyticsView: View {
         // Initialize the state variables with the view model values
         _selectedMonth = State(initialValue: analyticsViewModel.selectedMonth)
         _selectedYear = State(initialValue: analyticsViewModel.selectedYear)
+    }
+
+    private var currencyCode: String {
+        settingsViewModel.selectedCurrency
     }
     
     var body: some View {
@@ -95,7 +101,8 @@ struct AnalyticsView: View {
             // Category Spending Breakdown
             CategoryBreakdownView(
                 spendingByCategory: analyticsViewModel.spendingByCategory,
-                totalSpent: analyticsViewModel.totalSpent
+                totalSpent: analyticsViewModel.totalSpent,
+                currencyCode: currencyCode
             )
         }
     }
@@ -108,7 +115,26 @@ struct AnalyticsView: View {
                 value: analyticsViewModel.totalSpent,
                 valueFormat: .currency,
                 icon: "dollarsign.circle.fill",
-                color: .blue
+                color: .blue,
+                currencyCode: currencyCode
+            ),
+
+            SummaryCard(
+                title: "Income",
+                value: analyticsViewModel.totalIncome,
+                valueFormat: .currency,
+                icon: "arrow.down.circle.fill",
+                color: .green,
+                currencyCode: currencyCode
+            ),
+
+            SummaryCard(
+                title: "Net",
+                value: analyticsViewModel.netCashflow,
+                valueFormat: .currency,
+                icon: "equal.circle.fill",
+                color: analyticsViewModel.netCashflow >= 0 ? .green : .red,
+                currencyCode: currencyCode
             ),
 
             // Daily Average
@@ -117,7 +143,8 @@ struct AnalyticsView: View {
                 value: analyticsViewModel.averageDailySpend,
                 valueFormat: .currency,
                 icon: "calendar.badge.clock",
-                color: .green
+                color: .green,
+                currencyCode: currencyCode
             ),
 
             // Budget Used or No Budget
@@ -128,14 +155,16 @@ struct AnalyticsView: View {
                     valueFormat: .percent,
                     icon: "chart.pie.fill",
                     color: min(100, (analyticsViewModel.totalSpent / analyticsViewModel.currentBudget) * 100) >= 90 ? .red : 
-                          (min(100, (analyticsViewModel.totalSpent / analyticsViewModel.currentBudget) * 100) >= 75 ? .orange : .blue)
+                          (min(100, (analyticsViewModel.totalSpent / analyticsViewModel.currentBudget) * 100) >= 75 ? .orange : .blue),
+                    currencyCode: currencyCode
                 ) :
                 SummaryCard(
                     title: "Budget",
                     value: 0,
                     valueFormat: .noBudget,
                     icon: "chart.pie.fill",
-                    color: .gray
+                    color: .gray,
+                    currencyCode: currencyCode
                 ),
 
             // Remaining Per Day or Days Left
@@ -145,14 +174,16 @@ struct AnalyticsView: View {
                     value: analyticsViewModel.budgetRemainingPerDay,
                     valueFormat: .currency,
                     icon: "calendar.badge.clock",
-                    color: .purple
+                    color: .purple,
+                    currencyCode: currencyCode
                 ) :
                 SummaryCard(
                     title: "Days Left",
                     value: Double(analyticsViewModel.daysRemainingInMonth),
                     valueFormat: .days,
                     icon: "calendar",
-                    color: .purple
+                    color: .purple,
+                    currencyCode: currencyCode
                 )
         ])
     }
@@ -169,19 +200,20 @@ struct AnalyticsView: View {
             // Top Growing Categories
             CategoryTrendsView(categoryTrends: analyticsViewModel.categoryTrends.map { trend in
                 CategoryTrendsView.CategoryTrend(
-                    category: trend.category,
+                    categoryID: trend.categoryID,
                     month: analyticsViewModel.selectedMonth,
                     year: analyticsViewModel.selectedYear,
                     currentAmount: trend.currentAmount,
                     previousAmount: trend.previousAmount
                 )
-            })
+            }, currencyCode: currencyCode)
             
             // Monthly Projection
             if analyticsViewModel.projectedMonthlySpend > 0 {
                 ProjectionView(
                     projectedMonthlySpend: analyticsViewModel.projectedMonthlySpend,
-                    currentBudget: analyticsViewModel.currentBudget
+                    currentBudget: analyticsViewModel.currentBudget,
+                    currencyCode: currencyCode
                 )
             }
         }
@@ -195,7 +227,8 @@ struct AnalyticsView: View {
             KeyStatisticsView(
                 biggestExpenseCategory: analyticsViewModel.biggestExpenseCategory,
                 totalSpent: analyticsViewModel.totalSpent,
-                mostActiveSpendingPeriod: findMostActiveSpendingPeriod()
+                mostActiveSpendingPeriod: findMostActiveSpendingPeriod(),
+                currencyCode: currencyCode
             )
             
             // Auto-generated insights
@@ -365,6 +398,7 @@ struct AnalyticsView: View {
             // Budget Input
             BudgetInputView(
                 currentBudget: $analyticsViewModel.currentBudget,
+                currencyCode: currencyCode,
                 onSave: saveBudget
             )
             
@@ -374,7 +408,8 @@ struct AnalyticsView: View {
                     totalSpent: analyticsViewModel.totalSpent,
                     currentBudget: analyticsViewModel.currentBudget,
                     daysRemainingInMonth: analyticsViewModel.daysRemainingInMonth,
-                    budgetRemainingPerDay: analyticsViewModel.budgetRemainingPerDay
+                    budgetRemainingPerDay: analyticsViewModel.budgetRemainingPerDay,
+                    currencyCode: currencyCode
                 )
                 
                 // Budget recommendations
@@ -383,7 +418,8 @@ struct AnalyticsView: View {
                     totalSpent: analyticsViewModel.totalSpent,
                     currentBudget: analyticsViewModel.currentBudget,
                     daysRemainingInMonth: analyticsViewModel.daysRemainingInMonth,
-                    suggestedBudget: calculateSuggestedBudget()
+                    suggestedBudget: calculateSuggestedBudget(),
+                    currencyCode: currencyCode
                 )
             }
             
@@ -446,4 +482,6 @@ struct AnalyticsView: View {
 
 #Preview {
     AnalyticsView(analyticsViewModel: AnalyticsViewModel(expenses: []))
+        .environmentObject(SettingsViewModel())
+        .environmentObject(CategoryStore())
 }

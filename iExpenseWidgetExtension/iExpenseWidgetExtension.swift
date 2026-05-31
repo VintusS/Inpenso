@@ -65,12 +65,17 @@ func getMonthlyBudget() -> Double {
 struct ExpenseEntry: TimelineEntry {
     let date: Date
     let totalSpent: Double
+    let totalIncome: Double
     let spendingByCategory: [Category: Double]
     let monthlyBudget: Double
     
     // Computed properties for the widget
     var budgetRemaining: Double {
         max(0, monthlyBudget - totalSpent)
+    }
+
+    var netCashflow: Double {
+        totalIncome - totalSpent
     }
     
     var budgetProgress: Double {
@@ -113,7 +118,8 @@ struct ExpenseQuickAddProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> ExpenseEntry {
         ExpenseEntry(
             date: Date(), 
-            totalSpent: 0, 
+            totalSpent: 0,
+            totalIncome: 0,
             spendingByCategory: [:],
             monthlyBudget: 0
         )
@@ -143,16 +149,20 @@ struct ExpenseQuickAddProvider: AppIntentTimelineProvider {
             return month == currentMonth && year == currentYear
         }
 
-        let total = filteredExpenses.reduce(0) { $0 + $1.price }
+        let expenseTransactions = filteredExpenses.filter { $0.type == .expense }
+        let incomeTransactions = filteredExpenses.filter { $0.type == .income }
+        let total = expenseTransactions.reduce(0) { $0 + $1.price }
+        let incomeTotal = incomeTransactions.reduce(0) { $0 + $1.price }
 
         var categoryTotals: [Category: Double] = [:]
-        for expense in filteredExpenses {
+        for expense in expenseTransactions {
             categoryTotals[expense.category, default: 0] += expense.price
         }
 
         return ExpenseEntry(
             date: Date(), 
-            totalSpent: total, 
+            totalSpent: total,
+            totalIncome: incomeTotal,
             spendingByCategory: categoryTotals,
             monthlyBudget: monthlyBudget
         )
@@ -247,6 +257,13 @@ struct iExpenseWidgetEntryView: View {
                 Text("spent this month")
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                if entry.totalIncome > 0 {
+                    Text("Net \(entry.netCashflow, format: .currency(code: currencyCode))")
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(entry.netCashflow >= 0 ? .green : .red)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             
@@ -300,6 +317,29 @@ struct iExpenseWidgetEntryView: View {
             Text("spent this month")
                 .font(.headline)
                 .foregroundColor(.secondary)
+
+            if entry.totalIncome > 0 {
+                HStack(spacing: 16) {
+                    VStack {
+                        Text("Income")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(entry.totalIncome, format: .currency(code: currencyCode))
+                            .font(.headline)
+                            .foregroundColor(.green)
+                    }
+
+                    VStack {
+                        Text("Net")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Text(entry.netCashflow, format: .currency(code: currencyCode))
+                            .font(.headline)
+                            .foregroundColor(entry.netCashflow >= 0 ? .green : .red)
+                    }
+                }
+                .padding(.top, 4)
+            }
             
             // Budget visualization if available
             if entry.monthlyBudget > 0 {
@@ -430,6 +470,7 @@ extension ShapeStyle where Self == Color {
     ExpenseEntry(
         date: .now,
         totalSpent: 780.50,
+        totalIncome: 2400.00,
         spendingByCategory: [
             .food: 250.00,
             .shopping: 175.75,
@@ -447,6 +488,7 @@ extension ShapeStyle where Self == Color {
     ExpenseEntry(
         date: .now,
         totalSpent: 780.50,
+        totalIncome: 2400.00,
         spendingByCategory: [
             .food: 250.00,
             .shopping: 175.75,
@@ -464,6 +506,7 @@ extension ShapeStyle where Self == Color {
     ExpenseEntry(
         date: .now,
         totalSpent: 780.50,
+        totalIncome: 2400.00,
         spendingByCategory: [
             .food: 250.00,
             .shopping: 175.75,
@@ -474,4 +517,3 @@ extension ShapeStyle where Self == Color {
         monthlyBudget: 1000.00
     )
 }
-

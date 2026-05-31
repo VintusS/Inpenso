@@ -10,12 +10,14 @@ import Charts
 
 /// A component that displays spending breakdown by category
 struct CategoryBreakdownView: View {
-    let spendingByCategory: [Category: Double]
+    @EnvironmentObject private var categoryStore: CategoryStore
+
+    let spendingByCategory: [String: Double]
     let totalSpent: Double
     let currencyCode: String
     
     init(
-        spendingByCategory: [Category: Double],
+        spendingByCategory: [String: Double],
         totalSpent: Double,
         currencyCode: String? = nil
     ) {
@@ -38,7 +40,8 @@ struct CategoryBreakdownView: View {
                 VStack {
                     // Pie chart
                     Chart {
-                        ForEach(spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { category, amount in
+                        ForEach(spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { categoryID, amount in
+                            let category = categoryStore.category(for: categoryID)
                             SectorMark(
                                 angle: .value("Amount", amount),
                                 innerRadius: .ratio(0.6),
@@ -52,8 +55,8 @@ struct CategoryBreakdownView: View {
                     
                     // Category legend
                     VStack(spacing: 8) {
-                        ForEach(spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { category, amount in
-                            categoryRow(category: category, amount: amount)
+                        ForEach(spendingByCategory.sorted(by: { $0.value > $1.value }), id: \.key) { categoryID, amount in
+                            categoryRow(category: categoryStore.category(for: categoryID), amount: amount)
                         }
                     }
                     .padding(.top, 8)
@@ -67,7 +70,7 @@ struct CategoryBreakdownView: View {
         )
     }
     
-    private func categoryRow(category: Category, amount: Double) -> some View {
+    private func categoryRow(category: FinanceCategory, amount: Double) -> some View {
         HStack {
             // Color indicator
             Circle()
@@ -99,17 +102,18 @@ struct CategoryBreakdownView: View {
 }
 
 #Preview {
-    let sampleData: [Category: Double] = [
-        .food: 450.50,
-        .transportation: 220.75,
-        .rent: 1200.00,
-        .entertainment: 180.25,
-        .utilities: 310.80
+    let sampleData: [String: Double] = [
+        Category.food.categoryID: 450.50,
+        Category.transportation.categoryID: 220.75,
+        Category.rent.categoryID: 1200.00,
+        Category.entertainment.categoryID: 180.25,
+        Category.utilities.categoryID: 310.80
     ]
     
     CategoryBreakdownView(
         spendingByCategory: sampleData,
         totalSpent: sampleData.values.reduce(0, +)
     )
+    .environmentObject(CategoryStore())
     .padding()
 } 

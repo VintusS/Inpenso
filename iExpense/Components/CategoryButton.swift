@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct CategoryButton: View {
-    let category: Category
+    let category: FinanceCategory
     let isSelected: Bool
     let action: () -> Void
     
@@ -58,12 +58,12 @@ struct CategoryButton: View {
 #Preview(traits: .sizeThatFitsLayout) {
     HStack(spacing: 20) {
         CategoryButton(
-            category: .food,
+            category: FinanceCategory.builtIn(for: .food),
             isSelected: true,
             action: {}
         )
         CategoryButton(
-            category: .transportation,
+            category: FinanceCategory.builtIn(for: .transportation),
             isSelected: false,
             action: {}
         )

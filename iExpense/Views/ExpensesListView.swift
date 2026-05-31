@@ -6,26 +6,26 @@
 import SwiftUI
 
 struct ExpensesListView: View {
+    @EnvironmentObject private var settingsViewModel: SettingsViewModel
+    @EnvironmentObject private var categoryStore: CategoryStore
+
     @ObservedObject var viewModel: ExpenseViewModel
     @StateObject private var analyticsViewModel = AnalyticsViewModel(expenses: [])
 
     @State private var selectedMonth: Int = Calendar.current.component(.month, from: Date())
     @State private var selectedYear: Int = Calendar.current.component(.year, from: Date())
     @State private var recentlyDeletedExpenses: [Expense] = []
-    @State private var showUndoSnackbar: Bool = false
-    @State private var undoTimer: Timer? = nil
-    @State private var selectedExpenseToEdit: Expense? = nil
-    @State private var showingFilterSheet: Bool = false
+    @State private var showUndoSnackbar = false
+    @State private var undoTimer: Timer?
+    @State private var selectedExpenseToEdit: Expense?
+    @State private var showingFilterSheet = false
     @State private var selectedSortOption: SortOption = .dateDescending
-    @State private var searchText: String = ""
-    @State private var showEmptyState: Bool = false
-    @State private var selectedCategories: Set<Category> = Set(Category.allCases)
-    @State private var isSearchActive = false
-    
-    // Animation states
+    @State private var selectedTransactionFilter: TransactionFilter = .all
+    @State private var searchText = ""
+    @State private var selectedCategoryIDs: Set<String> = []
     @State private var isListLoaded = false
-    
-    private let monthHistoryLength = 61 // include current month plus ~5 years of history
+
+    private let monthHistoryLength = 61
 
     enum SortOption: String, CaseIterable, Identifiable {
         case dateDescending = "Newest First"
@@ -33,51 +33,86 @@ struct ExpensesListView: View {
         case amountDescending = "Highest Amount"
         case amountAscending = "Lowest Amount"
         case titleAscending = "Title A-Z"
-        
-        var id: String { self.rawValue }
+
+        var id: String { rawValue }
     }
-    
-    private var totalAmount: Double {
-        filteredExpenses.reduce(0) { $0 + $1.price }
+
+    enum TransactionFilter: String, CaseIterable, Identifiable {
+        case all = "All"
+        case expenses = "Expenses"
+        case incomes = "Incomes"
+
+        var id: String { rawValue }
+
+        func matches(_ transaction: Expense) -> Bool {
+            switch self {
+            case .all:
+                return true
+            case .expenses:
+                return transaction.type == .expense
+            case .incomes:
+                return transaction.type == .income
+            }
+        }
     }
-    
+
+    private var currencyCode: String {
+        settingsViewModel.selectedCurrency
+    }
+
     private var filteredExpenses: [Expense] {
         var result = viewModel.expenses.filter { expense in
             let month = Calendar.current.component(.month, from: expense.date)
             let year = Calendar.current.component(.year, from: expense.date)
+            let category = categoryStore.category(for: expense)
+
             let matchesDate = month == selectedMonth && year == selectedYear
-            let matchesSearch = searchText.isEmpty || 
+            let matchesSearch = searchText.isEmpty ||
                 expense.title.localizedCaseInsensitiveContains(searchText) ||
-                expense.category.displayName.localizedCaseInsensitiveContains(searchText)
-            let matchesCategory = selectedCategories.contains(expense.category)
-            
-            return matchesDate && matchesSearch && matchesCategory
+                category.displayName.localizedCaseInsensitiveContains(searchText) ||
+                (expense.notes?.localizedCaseInsensitiveContains(searchText) ?? false)
+            let matchesCategory = selectedCategoryIDs.isEmpty || selectedCategoryIDs.contains(expense.categoryID)
+            let matchesType = selectedTransactionFilter.matches(expense)
+
+            return matchesDate && matchesSearch && matchesCategory && matchesType
         }
-        
-        // Apply sorting
+
         switch selectedSortOption {
         case .dateDescending:
-            result.sort(by: { $0.date > $1.date })
+            result.sort { $0.date > $1.date }
         case .dateAscending:
-            result.sort(by: { $0.date < $1.date })
+            result.sort { $0.date < $1.date }
         case .amountDescending:
-            result.sort(by: { $0.price > $1.price })
+            result.sort { $0.price > $1.price }
         case .amountAscending:
-            result.sort(by: { $0.price < $1.price })
+            result.sort { $0.price < $1.price }
         case .titleAscending:
-            result.sort(by: { $0.title < $1.title })
+            result.sort { $0.title < $1.title }
         }
-        
+
         return result
     }
-    
-    private var groupedExpenses: [Category: [Expense]] {
-        Dictionary(grouping: filteredExpenses) { $0.category }
+
+    private var totalSpent: Double {
+        filteredExpenses.filter { $0.type == .expense }.reduce(0) { $0 + $1.price }
     }
-    
-    private var visibleCategories: [Category] {
-        let categories = Array(groupedExpenses.keys).sorted(by: { $0.displayName < $1.displayName })
-        return categories
+
+    private var totalIncome: Double {
+        filteredExpenses.filter { $0.type == .income }.reduce(0) { $0 + $1.price }
+    }
+
+    private var netCashflow: Double {
+        totalIncome - totalSpent
+    }
+
+    private var groupedExpenses: [String: [Expense]] {
+        Dictionary(grouping: filteredExpenses) { $0.categoryID }
+    }
+
+    private var visibleCategoryIDs: [String] {
+        groupedExpenses.keys.sorted {
+            categoryStore.category(for: $0).displayName < categoryStore.category(for: $1).displayName
+        }
     }
 
     var body: some View {
@@ -85,105 +120,38 @@ struct ExpensesListView: View {
             ZStack {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
-                
+
                 VStack(spacing: 0) {
-                    // Month Year Picker
                     monthYearPicker
                         .padding(.top, 8)
-                    
-                    // Summary Card
+
                     if !filteredExpenses.isEmpty {
                         summaryCard
                             .padding(.horizontal)
                             .padding(.top, 16)
                             .padding(.bottom, 8)
                     }
-                    
-                    // Main content
+
                     if filteredExpenses.isEmpty {
                         emptyStateView
                             .transition(.opacity)
                             .animation(.easeInOut, value: filteredExpenses.isEmpty)
                     } else {
-                        List {
-                            ForEach(visibleCategories, id: \.self) { category in
-                                Section {
-                                    ForEach(groupedExpenses[category] ?? []) { expense in
-                                        ExpenseRowContent(expense: expense, onEdit: { 
-                                            selectedExpenseToEdit = expense
-                                        }, onDelete: {
-                                            deleteExpenseByID(expense)
-                                        })
-                                    }
-                                } header: {
-                                    HStack {
-                                        // Fixed-width icon container
-                                        ZStack {
-                                            Circle()
-                                                .fill(category.color)
-                                                .frame(width: 28, height: 28)
-                                            
-                                            Image(systemName: categoryIcon(for: category))
-                                                .foregroundColor(.white)
-                                                .font(.caption)
-                                        }
-                                        
-                                        Text(category.displayName)
-                                            .font(.headline)
-                                        
-                                        Spacer()
-                                        
-                                        // Total for this category
-                                        let categoryTotal = (groupedExpenses[category] ?? []).reduce(0) { $0 + $1.price }
-                                        Text(categoryTotal, format: .currency(code: SettingsViewModel.getAppCurrency()))
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .padding(.vertical, 6)
-                                }
-                            }
-                        }
-                        .listStyle(.insetGrouped)
-                        .opacity(isListLoaded ? 1 : 0)
-                        .animation(.easeIn(duration: 0.3), value: isListLoaded)
+                        transactionList
                     }
                 }
             }
-            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search expenses")
-            .onChange(of: searchText) {
-                withAnimation {
-                    isSearchActive = !searchText.isEmpty
-                }
-            }
-            .navigationTitle("Expenses")
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search transactions")
+            .navigationTitle("Transactions")
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    HStack(spacing: 12) {
-                        // Sort button
-                        Menu {
-                            Picker("Sort by", selection: $selectedSortOption) {
-                                ForEach(SortOption.allCases) { option in
-                                    Text(option.rawValue).tag(option)
-                                }
-                            }
-                        } label: {
-                            Label("Sort", systemImage: "arrow.up.arrow.down")
-                        }
-                        
-                        // Filter button
-                        Button(action: {
-                            showingFilterSheet = true
-                        }) {
-                            Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
-                        }
-                    }
+                    toolbarFilters
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        let newExpense = Expense(title: "", price: 0, date: Date(), category: .food)
-                        selectedExpenseToEdit = newExpense
-                    }) {
+                    Button {
+                        selectedExpenseToEdit = Expense(title: "", price: 0, date: Date(), category: .food)
+                    } label: {
                         Image(systemName: "plus")
                     }
                 }
@@ -193,8 +161,10 @@ struct ExpensesListView: View {
             }
             .onAppear {
                 analyticsViewModel.updateExpenses(viewModel.expenses)
-                
-                // Animate list appearance
+                if selectedCategoryIDs.isEmpty {
+                    selectedCategoryIDs = Set(categoryStore.allCategories.map(\.id))
+                }
+
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation {
                         isListLoaded = true
@@ -206,55 +176,98 @@ struct ExpensesListView: View {
             }
             .sheet(item: $selectedExpenseToEdit) { expenseToEdit in
                 if expenseToEdit.title.isEmpty {
-                    // This is a new expense
                     AddExpenseView(viewModel: viewModel)
                 } else {
-                    // Use ID parameter to force view refresh
                     EditExpenseView(viewModel: viewModel, expense: expenseToEdit)
-                        .id(expenseToEdit.id) // Force view to refresh completely on each presentation
+                        .id(expenseToEdit.id)
                 }
             }
             .sheet(isPresented: $showingFilterSheet) {
-                FilterCategoriesView(selectedCategories: $selectedCategories)
+                FilterCategoriesView(selectedCategoryIDs: $selectedCategoryIDs)
                     .presentationDetents([.medium])
             }
-            .overlay(
-                VStack {
-                    Spacer()
-                    if showUndoSnackbar {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                            
-                            Text("Expense deleted")
-                                .foregroundColor(.white)
-                            
-                            Spacer()
-                            
-                            Button("Undo") {
-                                undoDelete()
-                            }
-                            .foregroundColor(.yellow)
-                            .fontWeight(.bold)
-                        }
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 16)
-                                .fill(Color.black.opacity(0.85))
-                                .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
-                        )
-                        .padding(.horizontal)
-                        .padding(.bottom, 8)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                        .animation(.spring(), value: showUndoSnackbar)
-                    }
-                }
-            )
+            .overlay(undoSnackbar, alignment: .bottom)
         }
     }
-    
-    // MARK: - Month-Year Picker
-    
+
+    private var transactionList: some View {
+        List {
+            ForEach(visibleCategoryIDs, id: \.self) { categoryID in
+                let category = categoryStore.category(for: categoryID)
+
+                Section {
+                    ForEach(groupedExpenses[categoryID] ?? []) { expense in
+                        ExpenseRowContent(
+                            expense: expense,
+                            currencyCode: currencyCode,
+                            onEdit: {
+                                selectedExpenseToEdit = expense
+                            },
+                            onDelete: {
+                                deleteExpenseByID(expense)
+                            }
+                        )
+                    }
+                } header: {
+                    HStack {
+                        Image(systemName: category.iconName)
+                            .foregroundColor(.white)
+                            .font(.caption)
+                            .frame(width: 28, height: 28)
+                            .background(category.color)
+                            .clipShape(Circle())
+
+                        Text(category.displayName)
+                            .font(.headline)
+
+                        Spacer()
+
+                        let categoryTotal = (groupedExpenses[categoryID] ?? []).reduce(0) { total, transaction in
+                            total + (transaction.type == .income ? transaction.price : -transaction.price)
+                        }
+                        Text(categoryTotal, format: .currency(code: currencyCode))
+                            .font(.subheadline)
+                            .foregroundColor(categoryTotal >= 0 ? .green : .secondary)
+                    }
+                    .padding(.vertical, 6)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .opacity(isListLoaded ? 1 : 0)
+        .animation(.easeIn(duration: 0.3), value: isListLoaded)
+    }
+
+    private var toolbarFilters: some View {
+        HStack(spacing: 12) {
+            Menu {
+                Picker("Sort by", selection: $selectedSortOption) {
+                    ForEach(SortOption.allCases) { option in
+                        Text(option.rawValue).tag(option)
+                    }
+                }
+            } label: {
+                Label("Sort", systemImage: "arrow.up.arrow.down")
+            }
+
+            Menu {
+                Picker("Type", selection: $selectedTransactionFilter) {
+                    ForEach(TransactionFilter.allCases) { filter in
+                        Text(filter.rawValue).tag(filter)
+                    }
+                }
+            } label: {
+                Label("Type", systemImage: "line.3.horizontal.decrease")
+            }
+
+            Button {
+                showingFilterSheet = true
+            } label: {
+                Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
+            }
+        }
+    }
+
     private var monthYearPicker: some View {
         MonthYearPicker(
             selectedMonth: $selectedMonth,
@@ -264,80 +277,28 @@ struct ExpensesListView: View {
         .padding(.horizontal)
     }
 
-
-    
-    // MARK: - Summary Card
-    
     private var summaryCard: some View {
         VStack(spacing: 16) {
-            // Total amount for selected month
             HStack(spacing: 12) {
-                VStack(alignment: .leading,     spacing: 4) {
-                    Text("Total for \(Calendar.current.monthSymbols[selectedMonth - 1])")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    
-                    Text(totalAmount, format: .currency(code: SettingsViewModel.getAppCurrency()))
-                        .font(.title2)
-                        .fontWeight(.bold)
-                }
-                
-                Spacer()
-                
-                // Number of expenses
+                summaryMetric(title: "Income", amount: totalIncome, color: .green)
+                Divider()
+                summaryMetric(title: "Spent", amount: totalSpent, color: .primary)
+                Divider()
+                summaryMetric(title: "Net", amount: netCashflow, color: netCashflow >= 0 ? .green : .red)
+                Divider()
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("Expenses")
+                    Text("Items")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
-                    
+
                     Text("\(filteredExpenses.count)")
-                        .font(.title2)
+                        .font(.title3)
                         .fontWeight(.bold)
                 }
             }
-            
-            // Budget progress if available
+
             if analyticsViewModel.currentBudget > 0 {
-                VStack(spacing: 6) {
-                    HStack {
-                        Text("Monthly Budget")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Spacer()
-                        
-                        Text(totalAmount, format: .currency(code: SettingsViewModel.getAppCurrency()))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Text("of")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        
-                        Text(analyticsViewModel.currentBudget, format: .currency(code: SettingsViewModel.getAppCurrency()))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    // Progress bar
-                    let progress = min(1.0, totalAmount / analyticsViewModel.currentBudget)
-                    let progressColor: Color = progress < 0.75 ? .blue : (progress < 0.9 ? .orange : .red)
-                    
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            // Background
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color(.systemGray5))
-                                .frame(height: 6)
-                            
-                            // Progress
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(progressColor)
-                                .frame(width: geometry.size.width * CGFloat(progress), height: 6)
-                        }
-                    }
-                    .frame(height: 6)
-                }
+                budgetProgress
             }
         }
         .padding()
@@ -347,36 +308,90 @@ struct ExpensesListView: View {
                 .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
         )
     }
-    
-    // MARK: - Empty State View
-    
+
+    private func summaryMetric(title: String, amount: Double, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+
+            Text(amount, format: .currency(code: currencyCode))
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var budgetProgress: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Text("Monthly Budget")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Spacer()
+
+                Text(totalSpent, format: .currency(code: currencyCode))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text("of")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Text(analyticsViewModel.currentBudget, format: .currency(code: currencyCode))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            let progress = min(1.0, totalSpent / analyticsViewModel.currentBudget)
+            let progressColor: Color = progress < 0.75 ? .blue : (progress < 0.9 ? .orange : .red)
+
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color(.systemGray5))
+                        .frame(height: 6)
+
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(progressColor)
+                        .frame(width: geometry.size.width * CGFloat(progress), height: 6)
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+
     private var emptyStateView: some View {
         VStack(spacing: 20) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 70))
                 .foregroundColor(.gray.opacity(0.6))
                 .padding()
-            
-            Text("No Expenses Found")
+
+            Text("No Transactions Found")
                 .font(.title2)
                 .fontWeight(.bold)
-            
+
             if !searchText.isEmpty {
                 Text("Try adjusting your search or filters")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
-            } else if selectedCategories.count < Category.allCases.count {
+            } else if selectedCategoryIDs.count < categoryStore.allCategories.count {
                 Text("Try selecting more categories in the filter")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
-                
-                Button(action: {
-                    selectedCategories = Set(Category.allCases)
-                }) {
+
+                Button {
+                    selectedCategoryIDs = Set(categoryStore.allCategories.map(\.id))
+                } label: {
                     Text("Reset Filters")
                         .foregroundColor(.accentColor)
                         .padding(.vertical, 8)
@@ -388,31 +403,28 @@ struct ExpensesListView: View {
                 }
                 .padding(.top, 8)
             } else {
-                Text("Add your first expense for \(Calendar.current.monthSymbols[selectedMonth - 1]) \(String(selectedYear))")
+                Text("Add your first transaction for \(Calendar.current.monthSymbols[selectedMonth - 1]) \(String(selectedYear))")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
-                
-                Button(action: {
-                    let newExpense = Expense(title: "", price: 0, date: Date(), category: .food)
-                    selectedExpenseToEdit = newExpense
-                }) {
+
+                Button {
+                    selectedExpenseToEdit = Expense(title: "", price: 0, date: Date(), category: .food)
+                } label: {
                     let addExpenseLabel: some View =
-                        Label("Add Expense", systemImage: "plus")
+                        Label("Add Transaction", systemImage: "plus")
                             .foregroundColor(.white)
                             .padding(.vertical, 10)
                             .padding(.horizontal, 20)
-                    
+
                     if #available(iOS 26.0, *) {
                         addExpenseLabel
                             .glassEffect(.regular.tint(.blue).interactive())
-                        
                     } else {
                         addExpenseLabel
                             .background(Color.accentColor)
                             .cornerRadius(10)
-
                     }
                 }
                 .padding(.top, 8)
@@ -421,7 +433,40 @@ struct ExpensesListView: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
-    
+
+    private var undoSnackbar: some View {
+        VStack {
+            Spacer()
+            if showUndoSnackbar {
+                HStack {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+
+                    Text("Transaction deleted")
+                        .foregroundColor(.white)
+
+                    Spacer()
+
+                    Button("Undo") {
+                        undoDelete()
+                    }
+                    .foregroundColor(.yellow)
+                    .fontWeight(.bold)
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.black.opacity(0.85))
+                        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                )
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .animation(.spring(), value: showUndoSnackbar)
+            }
+        }
+    }
+
     private func refreshExpenses() {
         viewModel.loadExpenses()
     }
@@ -431,9 +476,9 @@ struct ExpensesListView: View {
             recentlyDeletedExpenses = [expense]
             viewModel.expenses.remove(at: index)
             viewModel.saveExpenses()
-            
+
             showUndoSnackbar = true
-            
+
             undoTimer?.invalidate()
             undoTimer = Timer.scheduledTimer(withTimeInterval: 3, repeats: false) { _ in
                 showUndoSnackbar = false
@@ -441,7 +486,7 @@ struct ExpensesListView: View {
             }
         }
     }
-    
+
     private func undoDelete() {
         undoTimer?.invalidate()
         viewModel.expenses.append(contentsOf: recentlyDeletedExpenses)
@@ -449,47 +494,20 @@ struct ExpensesListView: View {
         recentlyDeletedExpenses.removeAll()
         showUndoSnackbar = false
     }
-    
-    private func categoryIcon(for category: Category) -> String {
-        switch category {
-        case .food:
-            return "cart.fill"
-        case .eatingOut:
-            return "fork.knife"
-        case .rent:
-            return "house.fill"
-        case .shopping:
-            return "bag.fill"
-        case .entertainment:
-            return "tv.fill"
-        case .transportation:
-            return "car.fill"
-        case .utilities:
-            return "bolt.fill"
-        case .subscriptions:
-            return "repeat"
-        case .healthcare:
-            return "heart.fill"
-        case .education:
-            return "book.fill"
-        case .others:
-            return "ellipsis"
-        }
-    }
 }
 
-// MARK: - Expense Row View
-
 struct ExpenseRowView: View {
+    @EnvironmentObject private var categoryStore: CategoryStore
+
     let expense: Expense
-    
+    let currencyCode: String
+
     var body: some View {
         HStack(spacing: 12) {
-            // Date column
             VStack(alignment: .center, spacing: 2) {
                 Text(dayNumber)
                     .font(.system(size: 18, weight: .semibold))
-                
+
                 Text(monthShort)
                     .font(.caption2)
                     .foregroundColor(.secondary)
@@ -499,46 +517,62 @@ struct ExpenseRowView: View {
             .padding(.vertical, 8)
             .background(Color(.tertiarySystemBackground))
             .cornerRadius(8)
-            
-            // Title and details
+
             VStack(alignment: .leading, spacing: 4) {
                 Text(expense.title)
                     .font(.headline)
                     .lineLimit(1)
-                
+
                 HStack(spacing: 6) {
-                    Image(systemName: "calendar")
+                    Image(systemName: category.iconName)
                         .font(.caption2)
+                        .foregroundColor(category.color)
+
+                    Text(category.displayName)
+                        .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
+                    Text("•")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
                     Text(formattedDate)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
-            // Price
-            Text(expense.price, format: .currency(code: SettingsViewModel.getAppCurrency()))
+
+            Text(amountText)
                 .font(.system(.headline, design: .rounded))
                 .fontWeight(.bold)
+                .foregroundColor(expense.type.amountColor)
         }
         .padding(.vertical, 6)
     }
-    
+
+    private var category: FinanceCategory {
+        categoryStore.category(for: expense)
+    }
+
+    private var amountText: String {
+        let formatted = expense.price.formatted(.currency(code: currencyCode))
+        return expense.type == .income ? "+\(formatted)" : formatted
+    }
+
     private var dayNumber: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "d"
         return formatter.string(from: expense.date)
     }
-    
+
     private var monthShort: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM"
         return formatter.string(from: expense.date)
     }
-    
+
     private var formattedDate: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "E, d MMM yyyy"
@@ -546,107 +580,57 @@ struct ExpenseRowView: View {
     }
 }
 
-// MARK: - Filter Categories View
-
 struct FilterCategoriesView: View {
-    @Binding var selectedCategories: Set<Category>
     @Environment(\.dismiss) private var dismiss
-    
-    @State private var tempSelectedCategories: Set<Category>
-    
-    init(selectedCategories: Binding<Set<Category>>) {
-        self._selectedCategories = selectedCategories
-        self._tempSelectedCategories = State(initialValue: selectedCategories.wrappedValue)
+    @EnvironmentObject private var categoryStore: CategoryStore
+
+    @Binding var selectedCategoryIDs: Set<String>
+    @State private var tempSelectedCategoryIDs: Set<String>
+
+    init(selectedCategoryIDs: Binding<Set<String>>) {
+        self._selectedCategoryIDs = selectedCategoryIDs
+        self._tempSelectedCategoryIDs = State(initialValue: selectedCategoryIDs.wrappedValue)
     }
-    
+
     var body: some View {
         NavigationView {
-            VStack {
-                List {
-                    Section {
-                        ForEach(Category.allCases, id: \.self) { category in
-                            HStack {
-                                // Fixed-width icon container
-                                ZStack {
-                                    Circle()
-                                        .fill(category.color)
-                                        .frame(width: 28, height: 28)
-                                    
-                                    Image(systemName: categoryIcon(for: category))
-                                        .foregroundColor(.white)
-                                        .font(.caption)
-                                }
-                                
-                                Text(category.displayName)
-                                    .font(.body)
-                                
-                                Spacer()
-                                
-                                if tempSelectedCategories.contains(category) {
-                                    Image(systemName: "checkmark")
-                                        .foregroundColor(.accentColor)
-                                }
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                if tempSelectedCategories.contains(category) {
-                                    if tempSelectedCategories.count > 1 {  // Prevent removing all categories
-                                        tempSelectedCategories.remove(category)
-                                    }
-                                } else {
-                                    tempSelectedCategories.insert(category)
-                                }
+            List {
+                Section {
+                    ForEach(categoryStore.allCategories) { category in
+                        HStack {
+                            Image(systemName: category.iconName)
+                                .foregroundColor(.white)
+                                .font(.caption)
+                                .frame(width: 28, height: 28)
+                                .background(category.color)
+                                .clipShape(Circle())
+
+                            Text(category.displayName)
+                                .font(.body)
+
+                            Spacer()
+
+                            if tempSelectedCategoryIDs.contains(category.id) {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
                             }
                         }
-                    } header: {
-                        Text("Categories")
-                    } footer: {
-                        Text("Select which expense categories to display")
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if tempSelectedCategoryIDs.contains(category.id) {
+                                if tempSelectedCategoryIDs.count > 1 {
+                                    tempSelectedCategoryIDs.remove(category.id)
+                                }
+                            } else {
+                                tempSelectedCategoryIDs.insert(category.id)
+                            }
+                        }
                     }
+                } header: {
+                    Text("Categories")
+                } footer: {
+                    Text("Select which categories to display")
                 }
-                
-//                HStack(spacing: 12) {
-//                    Button {
-//                        tempSelectedCategories = Set(Category.allCases)
-//                    } label: {
-//                        let selectAllButton: some View = Text("Select All")
-//                            .frame(maxWidth: .infinity)
-//                            .padding(.vertical, 12)
-//                        if #available(iOS 26.0, *) {
-//                            selectAllButton
-//                                .foregroundColor(.white)
-//                                .glassEffect(.regular.tint(.blue).interactive())
-//                        } else {
-//                            selectAllButton
-//                                .foregroundColor(.accentColor)
-//                                .background(
-//                                    RoundedRectangle(cornerRadius: 10)
-//                                        .stroke(Color.accentColor, lineWidth: 1)
-//                                )
-//                        }
-//                    }
-//                    
-//                    Button {
-//                        selectedCategories = tempSelectedCategories
-//                        dismiss()
-//                    } label: {
-//                        let applyButton: some View = Text("Apply")
-//                            .foregroundColor(.white)
-//                            .padding(.vertical, 12)
-//                            .frame(maxWidth: .infinity)
-//                        if #available(iOS 26.0, *) {
-//                            applyButton
-//                                .glassEffect(.regular.tint(.blue).interactive())
-//                        } else {
-//                            applyButton
-//                                .background(
-//                                    RoundedRectangle(cornerRadius: 10)
-//                                        .fill(Color.accentColor)
-//                                )
-//                        }
-//                    }
-//                }
-//                .padding()
             }
             .navigationTitle("Filter")
             .navigationBarTitleDisplayMode(.inline)
@@ -656,83 +640,46 @@ struct FilterCategoriesView: View {
                         dismiss()
                     }
                 }
-                
+
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Apply") {
-                        selectedCategories = tempSelectedCategories
+                        selectedCategoryIDs = tempSelectedCategoryIDs
                         dismiss()
                     }
-                    
                 }
             }
-        }
-    }
-    
-    private func categoryIcon(for category: Category) -> String {
-        switch category {
-        case .food:
-            return "cart.fill"
-        case .eatingOut:
-            return "fork.knife"
-        case .rent:
-            return "house.fill"
-        case .shopping:
-            return "bag.fill"
-        case .entertainment:
-            return "tv.fill"
-        case .transportation:
-            return "car.fill"
-        case .utilities:
-            return "bolt.fill"
-        case .subscriptions:
-            return "repeat"
-        case .healthcare:
-            return "heart.fill"
-        case .education:
-            return "book.fill"
-        case .others:
-            return "ellipsis"
         }
     }
 }
 
 struct ExpenseRowContent: View {
     let expense: Expense
+    let currencyCode: String
     let onEdit: () -> Void
     let onDelete: () -> Void
-    
+
     var body: some View {
-        ExpenseRowView(expense: expense)
+        ExpenseRowView(expense: expense, currencyCode: currencyCode)
             .contentShape(Rectangle())
             .onTapGesture {
-                print("DEBUG: Tap gesture on expense with ID \(expense.id), title \(expense.title)")
                 onEdit()
-                print("DEBUG: Directly setting selectedExpenseToEdit")
             }
             .contextMenu {
-                Button(action: {
-                    onEdit()
-                }) {
+                Button(action: onEdit) {
                     Label("Edit", systemImage: "pencil")
                 }
-                
-                Button(role: .destructive, action: {
-                    onDelete()
-                }) {
+
+                Button(role: .destructive, action: onDelete) {
                     Label("Delete", systemImage: "trash")
                 }
             }
             .swipeActions(edge: .leading) {
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
+                Button(role: .destructive, action: onDelete) {
                     Label("Delete", systemImage: "trash")
                 }
             }
             .swipeActions(edge: .trailing) {
-                Button {
-                    onEdit()
-                } label: {
+                Button(action: onEdit) {
                     Label("Edit", systemImage: "pencil")
                 }
                 .tint(.blue)
@@ -742,4 +689,7 @@ struct ExpenseRowContent: View {
 
 #Preview {
     ExpensesListView(viewModel: ExpenseViewModel())
+        .environmentObject(SettingsViewModel())
+        .environmentObject(CategoryStore())
 }
+

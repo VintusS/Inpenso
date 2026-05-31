@@ -16,6 +16,7 @@ struct iExpenseApp: App {
     }
     
     @StateObject private var settingsViewModel = SettingsViewModel()
+    @StateObject private var categoryStore = CategoryStore()
     
     var body: some Scene {
         WindowGroup {
@@ -27,6 +28,7 @@ struct iExpenseApp: App {
                     await SwiftDataProvider.shared.startMigration()
                 }
                 .environmentObject(settingsViewModel)
+                .environmentObject(categoryStore)
                 .preferredColorScheme(settingsViewModel.selectedTheme.colorScheme)
         }
     }

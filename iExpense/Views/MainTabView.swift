@@ -31,7 +31,7 @@ struct MainTabView: View {
 
                 ExpensesListView(viewModel: viewModel)
                     .tabItem {
-                        Label("Expenses", systemImage: "list.bullet.rectangle.portrait.fill")
+                        Label("Transactions", systemImage: "list.bullet.rectangle.portrait.fill")
                     }
                     .tag(2)
 
@@ -41,6 +41,7 @@ struct MainTabView: View {
                     }
                     .tag(3)
             }
+            .id(settingsViewModel.selectedCurrency)
         }
         .preferredColorScheme(settingsViewModel.selectedTheme.colorScheme)
         .onAppear {

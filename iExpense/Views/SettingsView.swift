@@ -8,6 +8,7 @@ import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @EnvironmentObject var settingsManager: SettingsViewModel
+    @EnvironmentObject private var categoryStore: CategoryStore
     
     @State private var showingImportFilePicker = false
     @State private var showingExportShareSheet = false
@@ -28,6 +29,9 @@ struct SettingsView: View {
                 
                 // Default Settings Section
                 defaultSettingsSection
+
+                // Category Management Section
+                categoriesSection
                 
                 // Data Management Section
                 dataManagementSection
@@ -109,20 +113,31 @@ struct SettingsView: View {
     }
     
     private var categoryPicker: some View {
-        Picker("Default Category", selection: $settingsManager.defaultCategory) {
-            ForEach(Category.allCases, id: \.self) { category in
+        Picker("Default Category", selection: $settingsManager.defaultCategoryID) {
+            ForEach(categoryStore.allCategories) { category in
                 categoryRow(for: category)
             }
         }
         .pickerStyle(.menu)
     }
     
-    private func categoryRow(for category: Category) -> some View {
+    private func categoryRow(for category: FinanceCategory) -> some View {
         HStack {
             Circle()
                 .fill(category.color)
                 .frame(width: 12, height: 12)
-            Text(category.displayName).tag(category)
+            Text(category.displayName)
+        }
+        .tag(category.id)
+    }
+
+    private var categoriesSection: some View {
+        Section(header: Text("Categories")) {
+            NavigationLink {
+                CategoryManagementView()
+            } label: {
+                Label("Manage Categories", systemImage: "square.grid.2x2")
+            }
         }
     }
     
@@ -262,4 +277,5 @@ struct ShareSheet: UIViewControllerRepresentable {
 #Preview {
     SettingsView()
         .environmentObject(SettingsViewModel())
+        .environmentObject(CategoryStore())
 }

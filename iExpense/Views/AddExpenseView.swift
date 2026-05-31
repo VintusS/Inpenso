@@ -10,19 +10,20 @@ import SwiftUI
 struct AddExpenseView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject private var settingsViewModel: SettingsViewModel
+    @EnvironmentObject private var categoryStore: CategoryStore
     @ObservedObject var viewModel: ExpenseViewModel
-    @StateObject private var settingsViewModel = SettingsViewModel()
     
     // Form fields
     @State private var title: String = ""
     @State private var price: String = ""
-    @State private var selectedCategory: Category
+    @State private var selectedCategoryID: String
+    @State private var transactionType: TransactionType = .expense
     @State private var selectedDate: Date = Date()
     @State private var notes: String = ""
     
     // UI States
     @State private var showDatePicker = false
-    @State private var keyboardHeight: CGFloat = 0
     @State private var keyboardVisible: Bool = false
     @State private var showingValidationAlert = false
     @State private var validationMessage = ""
@@ -31,15 +32,15 @@ struct AddExpenseView: View {
     // Current currency symbol
     private var currencySymbol: String {
         let locale = Locale.current
-        let currencyCode = SettingsViewModel.getAppCurrency()
+        let currencyCode = settingsViewModel.selectedCurrency
         return locale.localizedCurrencySymbol(forCurrencyCode: currencyCode) ?? currencyCode
     }
     
     init(viewModel: ExpenseViewModel) {
         self.viewModel = viewModel
         // Initialize with the default category from settings
-        let defaultCategory = UserDefaults.standard.string(forKey: "defaultCategory") ?? Category.food.rawValue
-        _selectedCategory = State(initialValue: Category(rawValue: defaultCategory) ?? .food)
+        let defaultCategoryID = UserDefaults.standard.string(forKey: "defaultCategoryID") ?? Category.food.categoryID
+        _selectedCategoryID = State(initialValue: defaultCategoryID)
     }
     
     var body: some View {
@@ -55,7 +56,10 @@ struct AddExpenseView: View {
                         
                         // Category selection
                         CardView(title: "Category") {
-                            CategoryGrid(selectedCategory: $selectedCategory)
+                            CategoryGrid(
+                                selectedCategoryID: $selectedCategoryID,
+                                categories: categoryStore.allCategories
+                            )
                                 .padding(.horizontal)
                         }
                         
@@ -81,15 +85,16 @@ struct AddExpenseView: View {
                     }
                     .padding(.horizontal)
                     .padding(.top, 10)
-                    .padding(.bottom, keyboardHeight > 0 ? keyboardHeight - 40 : 20)
+                    .padding(.bottom, 24)
                 }
+                .scrollDismissesKeyboard(.interactively)
                 
                 // Success animation overlay
                 if animateSuccess {
                     successOverlay
                 }
             }
-            .navigationTitle("Add Expense")
+            .navigationTitle("Add Transaction")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -107,11 +112,15 @@ struct AddExpenseView: View {
                     }
                 }
             }
-            .onAppear {
-                setupKeyboardObservers()
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                withAnimation {
+                    keyboardVisible = true
+                }
             }
-            .onDisappear {
-                removeKeyboardObservers()
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                withAnimation {
+                    keyboardVisible = false
+                }
             }
             .alert(validationMessage, isPresented: $showingValidationAlert) {
                 Button("OK", role: .cancel) { }
@@ -122,13 +131,21 @@ struct AddExpenseView: View {
     // MARK: - Main Data Card
     
     private var mainDataCard: some View {
-        CardView(title: "Expense Details", showDivider: true) {
+        CardView(title: "Transaction Details", showDivider: true) {
             VStack(spacing: 16) {
+                Picker("Type", selection: $transactionType) {
+                    ForEach(TransactionType.allCases) { type in
+                        Text(type.displayName).tag(type)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+
                 // Title field
                 TextFormField(
                     label: "Title",
                     text: $title,
-                    placeholder: "Expense title",
+                    placeholder: transactionType == .expense ? "Expense title" : "Income title",
                     leadingIcon: "pencil"
                 )
                 .padding(.horizontal)
@@ -175,7 +192,7 @@ struct AddExpenseView: View {
         Button(action: saveExpense) {
             HStack {
                 Spacer()
-                Text("Save Expense")
+                Text("Save Transaction")
                 Spacer()
             }
             .padding()
@@ -218,10 +235,10 @@ struct AddExpenseView: View {
                     .font(.system(size: 80))
                     .foregroundColor(.green)
                 
-                Text("Expense Added!")
+                Text("Transaction Added!")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.black)
             }
             .padding(30)
             .background(
@@ -247,12 +264,12 @@ struct AddExpenseView: View {
         
         // Validate inputs
         if title.isEmpty {
-            showValidationAlert("Please enter a title for your expense.")
+            showValidationAlert("Please enter a title.")
             return
         }
         
         if price.isEmpty {
-            showValidationAlert("Please enter the expense amount.")
+            showValidationAlert("Please enter an amount.")
             return
         }
         
@@ -267,22 +284,20 @@ struct AddExpenseView: View {
             animateSuccess = true
         }
         
-        // Add the expense with all fields
-        let newExpense = viewModel.addExpense(
+        let selectedCategory = categoryStore.category(for: selectedCategoryID)
+        let legacyCategory = Category.category(from: selectedCategory.id) ?? .others
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Add the transaction with all fields
+        _ = viewModel.addExpense(
             title: title,
             price: priceValue,
             date: selectedDate,
-            category: selectedCategory
+            category: legacyCategory,
+            type: transactionType,
+            categoryID: selectedCategory.id,
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes
         )
-        
-        // Save notes to UserDefaults using the expense ID
-        if !notes.isEmpty {
-            let notesKey = "notes_\(newExpense.id.uuidString)"
-            print("DEBUG: Saving notes for new expense: \(newExpense.id.uuidString)")
-            print("DEBUG: Notes content: \"\(notes)\"")
-            UserDefaults.standard.set(notes, forKey: notesKey)
-            UserDefaults.standard.synchronize()
-        }
         
         // Trigger success haptic
         HapticFeedback.success()
@@ -302,29 +317,6 @@ struct AddExpenseView: View {
     private func hideKeyboard() {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
-    
-    private func setupKeyboardObservers() {
-        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
-            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                self.keyboardHeight = keyboardFrame.height
-                withAnimation {
-                    self.keyboardVisible = true
-                }
-            }
-        }
-        
-        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-            self.keyboardHeight = 0
-            withAnimation {
-                self.keyboardVisible = false
-            }
-        }
-    }
-    
-    private func removeKeyboardObservers() {
-        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
-    }
 }
 
 // MARK: - Locale Extension
@@ -338,4 +330,6 @@ extension Locale {
 
 #Preview {
     AddExpenseView(viewModel: ExpenseViewModel())
+        .environmentObject(SettingsViewModel())
+        .environmentObject(CategoryStore())
 }

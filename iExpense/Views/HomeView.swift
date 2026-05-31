@@ -9,6 +9,9 @@ import SwiftUI
 import Charts
 
 struct HomeView: View {
+    @EnvironmentObject private var settingsViewModel: SettingsViewModel
+    @EnvironmentObject private var categoryStore: CategoryStore
+
     @ObservedObject var viewModel: ExpenseViewModel
     @ObservedObject var analyticsViewModel: AnalyticsViewModel
     @State private var showingAddExpense = false
@@ -18,6 +21,10 @@ struct HomeView: View {
     @State private var showingEditExpense = false
     
     private let recentDaysToShow = 7
+
+    private var currencyCode: String {
+        settingsViewModel.selectedCurrency
+    }
     
     var body: some View {
         NavigationView {
@@ -71,15 +78,23 @@ struct HomeView: View {
         VStack(spacing: 16) {
             // Total display
             VStack(spacing: 4) {
-                Text("Total Spent This Month")
+                Text("Monthly Cashflow")
                     .font(.headline)
                     .foregroundColor(.secondary)
                 
-                Text(analyticsViewModel.totalSpent, format: .currency(code: SettingsViewModel.getAppCurrency()))
+                Text(analyticsViewModel.netCashflow, format: .currency(code: currencyCode))
                     .font(.system(size: 42, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
+                    .foregroundColor(analyticsViewModel.netCashflow >= 0 ? .green : .red)
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
+            }
+
+            HStack {
+                cashflowMetric(title: "Income", amount: analyticsViewModel.totalIncome, color: .green)
+                Divider()
+                cashflowMetric(title: "Spent", amount: analyticsViewModel.totalSpent, color: .primary)
+                Divider()
+                cashflowMetric(title: "Net", amount: analyticsViewModel.netCashflow, color: analyticsViewModel.netCashflow >= 0 ? .green : .red)
             }
             
             // Budget information if available
@@ -264,14 +279,16 @@ struct HomeView: View {
                         HStack(spacing: 12) {
                             // Icon and category
                             HStack(spacing: 8) {
-                                Image(systemName: categoryIcon(for: category))
+                                    let categoryDetails = categoryStore.category(for: category)
+
+                                    Image(systemName: categoryDetails.iconName)
                                     .font(.system(size: 16))
                                     .foregroundColor(.white)
                                     .frame(width: 30, height: 30)
-                                    .background(category.color)
+                                    .background(categoryDetails.color)
                                     .cornerRadius(8)
                                 
-                                Text(category.displayName)
+                                Text(categoryDetails.displayName)
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                             }
@@ -280,7 +297,7 @@ struct HomeView: View {
                             
                             // Amount and percentage
                             VStack(alignment: .trailing, spacing: 2) {
-                                Text(amount, format: .currency(code: SettingsViewModel.getAppCurrency()))
+                                Text(amount, format: .currency(code: currencyCode))
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
                                 
@@ -314,7 +331,7 @@ struct HomeView: View {
     private var recentExpensesSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Recent Expenses")
+                Text("Recent Transactions")
                     .font(.headline)
                 
                 Spacer()
@@ -333,7 +350,7 @@ struct HomeView: View {
             
             if showRecentExpenses {
                 if viewModel.expenses.isEmpty {
-                    Text("No expenses yet")
+                    Text("No transactions yet")
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
                     
@@ -348,11 +365,13 @@ struct HomeView: View {
                         } label: {
                             HStack(spacing: 12) {
                                 // Category icon
-                                Image(systemName: categoryIcon(for: expense.category))
+                                    let category = categoryStore.category(for: expense)
+
+                                    Image(systemName: category.iconName)
                                     .font(.system(size: 14))
                                     .foregroundColor(.white)
                                     .frame(width: 28, height: 28)
-                                    .background(expense.category.color)
+                                    .background(category.color)
                                     .cornerRadius(6)
                                 
                                 // Title and date
@@ -370,10 +389,10 @@ struct HomeView: View {
                                 Spacer()
                                 
                                 // Amount
-                                Text(expense.price, format: .currency(code: SettingsViewModel.getAppCurrency()))
+                                Text(amountText(for: expense))
                                     .font(.subheadline)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(expense.type.amountColor)
                             }
                             .padding(.vertical, 8)
                         }
@@ -389,7 +408,7 @@ struct HomeView: View {
                         // Use NotificationCenter to notify MainTabView to switch to expenses tab
                         NotificationCenter.default.post(name: NSNotification.Name("SwitchToExpensesTab"), object: nil)
                     }) {
-                        let viewAllExpensesButton: some View = Text("View All Expenses")
+                        let viewAllExpensesButton: some View = Text("View All Transactions")
                             .font(.subheadline)
                             .fontWeight(.medium)
                             .frame(maxWidth: .infinity)
@@ -424,31 +443,25 @@ struct HomeView: View {
     
     // MARK: - Helper Methods
     
-    private func categoryIcon(for category: Category) -> String {
-        switch category {
-        case .food:
-            return "cart.fill"
-        case .eatingOut:
-            return "fork.knife"
-        case .rent:
-            return "house.fill"
-        case .shopping:
-            return "bag.fill"
-        case .entertainment:
-            return "tv.fill"
-        case .transportation:
-            return "car.fill"
-        case .utilities:
-            return "bolt.fill"
-        case .subscriptions:
-            return "repeat"
-        case .healthcare:
-            return "heart.fill"
-        case .education:
-            return "book.fill"
-        case .others:
-            return "ellipsis"
+    private func cashflowMetric(title: String, amount: Double, color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Text(amount, format: .currency(code: currencyCode))
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func amountText(for expense: Expense) -> String {
+        let formatted = expense.price.formatted(.currency(code: currencyCode))
+        return expense.type == .income ? "+\(formatted)" : formatted
     }
 }
 
@@ -457,4 +470,6 @@ struct HomeView: View {
         viewModel: ExpenseViewModel(),
         analyticsViewModel: AnalyticsViewModel(expenses: [])
     )
+    .environmentObject(SettingsViewModel())
+    .environmentObject(CategoryStore())
 }

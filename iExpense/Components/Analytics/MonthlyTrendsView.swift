@@ -98,8 +98,8 @@ struct MonthlyTrendsView: View {
 /// A component that displays category trend information
 struct CategoryTrendsView: View {
     struct CategoryTrend: Identifiable {
-        var id: String { "\(category.rawValue)-\(month)-\(year)" }
-        let category: Category
+        var id: String { "\(categoryID)-\(month)-\(year)" }
+        let categoryID: String
         let month: Int
         let year: Int
         let currentAmount: Double
@@ -113,6 +113,8 @@ struct CategoryTrendsView: View {
         }
     }
     
+    @EnvironmentObject private var categoryStore: CategoryStore
+
     let categoryTrends: [CategoryTrend]
     let currencyCode: String
     
@@ -155,13 +157,15 @@ struct CategoryTrendsView: View {
     }
     
     private func categoryTrendRow(trend: CategoryTrend) -> some View {
-        HStack {
+        let category = categoryStore.category(for: trend.categoryID)
+
+        return HStack {
             // Category color and name
             Circle()
-                .fill(trend.category.color)
+                .fill(category.color)
                 .frame(width: 12, height: 12)
             
-            Text(trend.category.displayName)
+            Text(category.displayName)
                 .font(.subheadline)
             
             Spacer()
@@ -290,21 +294,21 @@ struct ProjectionView: View {
         // Category trends preview
         let categoryTrends = [
             CategoryTrendsView.CategoryTrend(
-                category: .food,
+                categoryID: Category.food.categoryID,
                 month: 5,
                 year: 2025,
                 currentAmount: 450.50,
                 previousAmount: 380.25
             ),
             CategoryTrendsView.CategoryTrend(
-                category: .transportation,
+                categoryID: Category.transportation.categoryID,
                 month: 5,
                 year: 2025,
                 currentAmount: 220.75,
                 previousAmount: 280.50
             ),
             CategoryTrendsView.CategoryTrend(
-                category: .entertainment,
+                categoryID: Category.entertainment.categoryID,
                 month: 5,
                 year: 2025,
                 currentAmount: 180.25,
@@ -313,6 +317,7 @@ struct ProjectionView: View {
         ]
         
         CategoryTrendsView(categoryTrends: categoryTrends)
+            .environmentObject(CategoryStore())
         
         // Projection preview
         ProjectionView(

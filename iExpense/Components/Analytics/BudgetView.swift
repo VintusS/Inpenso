@@ -211,7 +211,9 @@ struct BudgetStatusView: View {
 
 /// A component that displays budget recommendations
 struct BudgetRecommendationsView: View {
-    let biggestExpenseCategory: (category: Category, amount: Double)?
+    @EnvironmentObject private var categoryStore: CategoryStore
+
+    let biggestExpenseCategory: (categoryID: String, amount: Double)?
     let totalSpent: Double
     let currentBudget: Double
     let daysRemainingInMonth: Int
@@ -219,7 +221,7 @@ struct BudgetRecommendationsView: View {
     let currencyCode: String
     
     init(
-        biggestExpenseCategory: (category: Category, amount: Double)?,
+        biggestExpenseCategory: (categoryID: String, amount: Double)?,
         totalSpent: Double,
         currentBudget: Double,
         daysRemainingInMonth: Int,
@@ -241,8 +243,10 @@ struct BudgetRecommendationsView: View {
             
             VStack(spacing: 16) {
                 // Recommend categories to cut
-                if let (category, amount) = biggestExpenseCategory, 
+                if let (categoryID, amount) = biggestExpenseCategory,
                    totalSpent > currentBudget {
+                    let category = categoryStore.category(for: categoryID)
+
                     HStack {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Consider Reducing")
@@ -410,12 +414,13 @@ struct BudgetHistoryView: View {
         
         // Budget Recommendations preview
         BudgetRecommendationsView(
-            biggestExpenseCategory: (Category.food, 450.50),
+            biggestExpenseCategory: (Category.food.categoryID, 450.50),
             totalSpent: 1875.50,
             currentBudget: 2500.00,
             daysRemainingInMonth: 14,
             suggestedBudget: 2700.00
         )
+        .environmentObject(CategoryStore())
         
         // Budget History preview
         BudgetHistoryView(complianceData: [

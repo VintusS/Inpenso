@@ -15,13 +15,15 @@ extension SpendingInsight: Identifiable {
 
 /// A component that displays key spending statistics
 struct KeyStatisticsView: View {
-    let biggestExpenseCategory: (category: Category, amount: Double)?
+    @EnvironmentObject private var categoryStore: CategoryStore
+
+    let biggestExpenseCategory: (categoryID: String, amount: Double)?
     let totalSpent: Double
     let mostActiveSpendingPeriod: String?
     let currencyCode: String
     
     init(
-        biggestExpenseCategory: (category: Category, amount: Double)?,
+        biggestExpenseCategory: (categoryID: String, amount: Double)?,
         totalSpent: Double,
         mostActiveSpendingPeriod: String?,
         currencyCode: String? = nil
@@ -38,7 +40,9 @@ struct KeyStatisticsView: View {
                 .font(.headline)
             
             // Biggest expense category
-            if let (category, amount) = biggestExpenseCategory {
+            if let (categoryID, amount) = biggestExpenseCategory {
+                let category = categoryStore.category(for: categoryID)
+
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Top Spending Category")
@@ -250,10 +254,11 @@ struct SpendingPatternView: View {
     VStack(spacing: 20) {
         // Key Statistics preview
         KeyStatisticsView(
-            biggestExpenseCategory: (Category.food, 450.50),
+            biggestExpenseCategory: (Category.food.categoryID, 450.50),
             totalSpent: 1850.25,
             mostActiveSpendingPeriod: "Wednesday"
         )
+        .environmentObject(CategoryStore())
         
         // Insights preview
         InsightsCardView(insights: [

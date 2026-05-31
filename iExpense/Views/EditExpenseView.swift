@@ -10,52 +10,36 @@ import SwiftUI
 struct EditExpenseView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject private var settingsViewModel: SettingsViewModel
+    @EnvironmentObject private var categoryStore: CategoryStore
     @ObservedObject var viewModel: ExpenseViewModel
 
     @State private var title: String
     @State private var price: String
     @State private var selectedDate: Date
-    @State private var selectedCategory: Category
+    @State private var selectedCategoryID: String
+    @State private var transactionType: TransactionType
     @State private var showDatePicker: Bool = false
     @State private var notes: String = ""
-    @State private var keyboardHeight: CGFloat = 0
     @State private var keyboardVisible: Bool = false
     @State private var viewID = UUID()
     let expense: Expense
 
     init(viewModel: ExpenseViewModel, expense: Expense) {
-        print("DEBUG: EditExpenseView init for expense ID \(expense.id.uuidString)")
         self.viewModel = viewModel
         self.expense = expense
         _title = State(initialValue: expense.title)
         _price = State(initialValue: String(format: "%.2f", expense.price))
         _selectedDate = State(initialValue: expense.date)
-        _selectedCategory = State(initialValue: expense.category)
-        
-        // Load notes directly from UserDefaults using expense ID as key
-        let notesKey = "notes_\(expense.id.uuidString)"
-        // List all the keys in UserDefaults to debug
-        print("DEBUG: ALL USERDEFAULTS KEYS:")
-        for key in UserDefaults.standard.dictionaryRepresentation().keys {
-            if key.starts(with: "notes_") {
-                let value = UserDefaults.standard.string(forKey: key) ?? "nil"
-                print("DEBUG:   - \(key) = \"\(value)\"")
-            }
-        }
-        
-        if let savedNotes = UserDefaults.standard.string(forKey: notesKey) {
-            print("DEBUG: Init - Found notes for key \(notesKey): \"\(savedNotes)\"")
-            _notes = State(initialValue: savedNotes)
-        } else {
-            print("DEBUG: Init - No notes found for key \(notesKey)")
-            _notes = State(initialValue: "")
-        }
+        _selectedCategoryID = State(initialValue: expense.categoryID)
+        _transactionType = State(initialValue: expense.type)
+        _notes = State(initialValue: expense.notes ?? "")
     }
 
     // Current currency symbol
     private var currencySymbol: String {
         let locale = Locale.current
-        let currencyCode = SettingsViewModel.getAppCurrency()
+        let currencyCode = settingsViewModel.selectedCurrency
         return locale.localizedCurrencySymbol(forCurrencyCode: currencyCode) ?? currencyCode
     }
 
@@ -68,12 +52,20 @@ struct EditExpenseView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         // Title and price card
-                        CardView(title: "Expense Details", showDivider: true) {
+                        CardView(title: "Transaction Details", showDivider: true) {
                             VStack(spacing: 16) {
+                                Picker("Type", selection: $transactionType) {
+                                    ForEach(TransactionType.allCases) { type in
+                                        Text(type.displayName).tag(type)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .padding(.horizontal)
+
                                 TextFormField(
                                     label: "Title",
                                     text: $title,
-                                    placeholder: "Expense title"
+                                    placeholder: transactionType == .expense ? "Expense title" : "Income title"
                                 )
                                 .padding(.horizontal)
                                 
@@ -96,7 +88,10 @@ struct EditExpenseView: View {
                         
                         // Category selection
                         CardView(title: "Category") {
-                            CategoryGrid(selectedCategory: $selectedCategory)
+                            CategoryGrid(
+                                selectedCategoryID: $selectedCategoryID,
+                                categories: categoryStore.allCategories
+                            )
                                 .padding(.horizontal)
                         }
                         
@@ -116,15 +111,6 @@ struct EditExpenseView: View {
                                     .padding(8)
                                     .frame(minHeight: 100)
                                 
-                                // Display notes length for debugging
-                                Text("Notes length: \(notes.count)")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .padding(4)
-                                    .background(Color(.systemBackground).opacity(0.7))
-                                    .cornerRadius(4)
-                                    .padding(8)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                             }
                             .padding(.horizontal)
                             .padding(.bottom, 8)
@@ -165,7 +151,7 @@ struct EditExpenseView: View {
                             }) {
                                 let deleteButton: some View = HStack {
                                     Image(systemName: "trash.fill")
-                                    Text("Delete Expense")
+                                    Text("Delete Transaction")
                                 }
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 16)
@@ -184,11 +170,12 @@ struct EditExpenseView: View {
                         .padding(.top, 10)
                     }
                     .padding()
-                    .padding(.bottom, keyboardHeight > 0 ? keyboardHeight - 40 : 20)
+                    .padding(.bottom, 24)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
             .id(viewID)
-            .navigationTitle("Edit Expense")
+            .navigationTitle("Edit Transaction")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 // Cancel button
@@ -209,25 +196,16 @@ struct EditExpenseView: View {
             }
             .onAppear {
                 viewID = UUID()
-                
-                setupKeyboardObservers()
-                print("DEBUG: EditExpenseView appeared with notes: \"\(notes)\"")
-                
-                // Double check notes loading on appear
-                let notesKey = "notes_\(expense.id.uuidString)"
-                if let savedNotes = UserDefaults.standard.string(forKey: notesKey) {
-                    print("DEBUG: onAppear - Found notes for key \(notesKey): \"\(savedNotes)\"")
-                    // Force update notes if there's a mismatch
-                    if notes != savedNotes {
-                        notes = savedNotes
-                        print("DEBUG: onAppear - Updated notes to \"\(notes)\"")
-                    }
-                } else {
-                    print("DEBUG: onAppear - No notes found for key \(notesKey)")
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                withAnimation {
+                    keyboardVisible = true
                 }
             }
-            .onDisappear {
-                removeKeyboardObservers()
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+                withAnimation {
+                    keyboardVisible = false
+                }
             }
         }
     }
@@ -237,64 +215,32 @@ struct EditExpenseView: View {
     }
 
     private func saveChanges() {
-        print("DEBUG: Saving changes for expense ID \(expense.id.uuidString)")
         guard let priceValue = Double(price.replacingOccurrences(of: ",", with: ".")) else { return }
         
         if let index = viewModel.expenses.firstIndex(where: { $0.id == expense.id }) {
+            let selectedCategory = categoryStore.category(for: selectedCategoryID)
             viewModel.expenses[index].title = title
             viewModel.expenses[index].price = priceValue
             viewModel.expenses[index].date = selectedDate
-            viewModel.expenses[index].category = selectedCategory
+            viewModel.expenses[index].type = transactionType
+            viewModel.expenses[index].categoryID = selectedCategory.id
+            viewModel.expenses[index].category = Category.category(from: selectedCategory.id) ?? .others
+            let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            viewModel.expenses[index].notes = trimmedNotes.isEmpty ? nil : trimmedNotes
             viewModel.saveExpenses()
-            
-            // Save notes to UserDefaults with expense ID as key
-            let notesKey = "notes_\(expense.id.uuidString)"
-            UserDefaults.standard.set(notes, forKey: notesKey)
-            UserDefaults.standard.synchronize()
-            print("DEBUG: Saved notes for key \(notesKey): \"\(notes)\"")
         }
     }
 
     private func deleteExpense() {
-        print("DEBUG: Deleting expense ID \(expense.id.uuidString)")
         if let index = viewModel.expenses.firstIndex(where: { $0.id == expense.id }) {
             viewModel.expenses.remove(at: index)
             viewModel.saveExpenses()
-            
-            // Remove notes from UserDefaults when expense is deleted
-            let notesKey = "notes_\(expense.id.uuidString)"
-            UserDefaults.standard.removeObject(forKey: notesKey)
-            UserDefaults.standard.synchronize()
-            print("DEBUG: Removed notes for key \(notesKey)")
         }
-    }
-    
-    // MARK: - Keyboard Handling
-    
-    private func setupKeyboardObservers() {
-        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillShowNotification, object: nil, queue: .main) { notification in
-            if let keyboardFrame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                self.keyboardHeight = keyboardFrame.height
-                withAnimation {
-                    self.keyboardVisible = true
-                }
-            }
-        }
-        
-        NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillHideNotification, object: nil, queue: .main) { _ in
-            self.keyboardHeight = 0
-            withAnimation {
-                self.keyboardVisible = false
-            }
-        }
-    }
-    
-    private func removeKeyboardObservers() {
-        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillShowNotification, object: nil)
-        NotificationCenter.default.removeObserver(self, name: UIResponder.keyboardWillHideNotification, object: nil)
     }
 }
 
 #Preview {
     EditExpenseView(viewModel: ExpenseViewModel(), expense: Expense(title: "Sample", price: 10, date: Date(), category: .food))
+        .environmentObject(SettingsViewModel())
+        .environmentObject(CategoryStore())
 }

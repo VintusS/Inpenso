@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import WidgetKit
 
 enum AppTheme: String, CaseIterable, Identifiable {
     case light, dark, system
@@ -47,7 +48,7 @@ let availableCurrencies: [(code: String, symbol: String, name: String)] = [
 
 @MainActor
 class SettingsViewModel: ObservableObject {
-    @Published var selectedCurrency: String {
+    @Published var selectedCurrency: String = "USD" {
         didSet {
             // Save to standard UserDefaults
             UserDefaults.standard.set(selectedCurrency, forKey: "selectedCurrency")
@@ -56,16 +57,27 @@ class SettingsViewModel: ObservableObject {
             let sharedDefaults = UserDefaults(suiteName: StorageService.appGroupID)
             sharedDefaults?.set(selectedCurrency, forKey: "selectedCurrency")
             sharedDefaults?.synchronize() // Force immediate write
+            WidgetCenter.shared.reloadAllTimelines()
         }
     }
     
-    @Published var defaultCategory: Category {
+    @Published var defaultCategory: Category = .food {
         didSet {
             UserDefaults.standard.set(defaultCategory.rawValue, forKey: "defaultCategory")
         }
     }
+
+    @Published var defaultCategoryID: String = Category.food.categoryID {
+        didSet {
+            UserDefaults.standard.set(defaultCategoryID, forKey: "defaultCategoryID")
+
+            if let builtInCategory = Category.category(from: defaultCategoryID) {
+                defaultCategory = builtInCategory
+            }
+        }
+    }
     
-    @Published var selectedTheme: AppTheme {
+    @Published var selectedTheme: AppTheme = .system {
         didSet {
             UserDefaults.standard.set(selectedTheme.rawValue, forKey: "selectedTheme")
         }
@@ -97,6 +109,7 @@ class SettingsViewModel: ObservableObject {
         
         let savedCategory = UserDefaults.standard.string(forKey: "defaultCategory")
         self.defaultCategory = Category(rawValue: savedCategory ?? "food") ?? .food
+        self.defaultCategoryID = UserDefaults.standard.string(forKey: "defaultCategoryID") ?? self.defaultCategory.categoryID
         
         let savedTheme = UserDefaults.standard.string(forKey: "selectedTheme")
         self.selectedTheme = AppTheme(rawValue: savedTheme ?? "system") ?? .system
