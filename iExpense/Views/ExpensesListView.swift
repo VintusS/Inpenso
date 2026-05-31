@@ -171,6 +171,12 @@ struct ExpensesListView: View {
                     }
                 }
             }
+            .onChange(of: categoryStore.allCategories.map(\.id)) { oldCategoryIDs, newCategoryIDs in
+                let oldSet = Set(oldCategoryIDs)
+                let newSet = Set(newCategoryIDs)
+                selectedCategoryIDs.formUnion(newSet.subtracting(oldSet))
+                selectedCategoryIDs = selectedCategoryIDs.intersection(newSet)
+            }
             .onChange(of: viewModel.expenses) {
                 analyticsViewModel.updateExpenses(viewModel.expenses)
             }
