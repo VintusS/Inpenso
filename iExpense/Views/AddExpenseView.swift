@@ -238,7 +238,7 @@ struct AddExpenseView: View {
                 Text("Transaction Added!")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.black)
+                    .foregroundColor(.primary)
             }
             .padding(30)
             .background(
