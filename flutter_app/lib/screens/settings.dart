@@ -2,7 +2,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:pocketbase/pocketbase.dart' show ClientException;
 
+import '../models.dart';
 import '../state.dart';
 import '../theme.dart';
 import '../ui.dart';
@@ -34,6 +36,42 @@ class SettingsView extends StatelessWidget {
         ? showAlert(context, 'Import Successful', message: 'Your data has been imported successfully.')
         : showAlert(context, 'Import Failed',
             message: 'Failed to import data. Please check the file format and try again.');
+  }
+
+  Future<void> _connect(BuildContext context) async {
+    final url = TextEditingController(text: pocketBase.url), email = TextEditingController(), pass = TextEditingController();
+    final go = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Connect PocketBase'),
+        content: Column(children: [
+          gap(12),
+          CupertinoTextField(controller: url, placeholder: 'https://server:8090', keyboardType: TextInputType.url, autocorrect: false),
+          gap(8),
+          CupertinoTextField(controller: email, placeholder: 'Email', keyboardType: TextInputType.emailAddress, autocorrect: false),
+          gap(8),
+          CupertinoTextField(controller: pass, placeholder: 'Password', obscureText: true),
+        ]),
+        actions: [
+          CupertinoDialogAction(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          CupertinoDialogAction(isDefaultAction: true, onPressed: () => Navigator.pop(ctx, true), child: const Text('Connect')),
+        ],
+      ),
+    );
+    final (u, m, pw) = (url.text, email.text, pass.text);
+    for (final c in [url, email, pass]) {
+      c.dispose();
+    }
+    if (go != true) return;
+    try {
+      await pocketBase.connect(u, m, pw);
+    } on ClientException catch (e) {
+      if (context.mounted) {
+        showAlert(context, 'Connection Failed', message: (e.response['message'] as String?) ?? 'Cannot reach the server.');
+      }
+    } catch (_) {
+      if (context.mounted) showAlert(context, 'Connection Failed', message: 'Check the server URL.');
+    }
   }
 
   void _reset(BuildContext context) => showAlert(
@@ -104,7 +142,7 @@ class SettingsView extends StatelessWidget {
                     title: const Text('Default Category'),
                     trailing: MenuPicker<String>(
                       items: [
-                        for (final c in categories.visible)
+                        for (final c in categories.visibleFor(TransactionType.expense))
                           (c.id, Row(children: [dot(c.color), gap(8), Text(c.displayName)])),
                       ],
                       selected: settings.defaultCategoryID,
@@ -122,6 +160,22 @@ class SettingsView extends StatelessWidget {
                         .push(CupertinoPageRoute(builder: (_) => const CategoryManagementView())),
                   ),
                 ]),
+                CupertinoListSection.insetGrouped(
+                  header: SectionLabel('BANK SYNC'),
+                  footer: pocketBase.error == null ? null : Text(pocketBase.error!, style: TextStyle(color: red)),
+                  children: pocketBase.connected
+                      ? [
+                          CupertinoListTile(
+                            leading: Icon(CupertinoIcons.checkmark_seal_fill, color: context.c(SysColor.green)),
+                            title: const Text('PocketBase'),
+                            subtitle: Text(pocketBase.email),
+                          ),
+                          action(CupertinoIcons.arrow_2_circlepath, pocketBase.syncing ? 'Syncing…' : 'Sync Now', accent,
+                              pocketBase.sync),
+                          action(CupertinoIcons.xmark_circle, 'Disconnect', red, pocketBase.disconnect),
+                        ]
+                      : [action(CupertinoIcons.link, 'Connect PocketBase', accent, () => _connect(context))],
+                ),
                 CupertinoListSection.insetGrouped(header: SectionLabel('DATA MANAGEMENT'), children: [
                   action(CupertinoIcons.square_arrow_up, 'Export Data', accent, () => _export(context)),
                   action(CupertinoIcons.square_arrow_down, 'Import Data', accent, () => _import(context)),

@@ -24,6 +24,12 @@ const builtInRaw = [
   ('others', 'Others', 'ellipsis', '#8E8E93'),
 ];
 
+/// Income built-ins have no iOS raw value, so legacyRaw() exports them as 'others'.
+const builtInIncomeRaw = [
+  ('salary', 'Salary', 'banknote.fill', '#34C759'),
+  ('otherIncome', 'Other Income', 'gift.fill', '#30B0C7'),
+];
+
 String builtInID(String raw) => 'builtin-$raw';
 
 /// Legacy raw category for a category id, or 'others' (iOS `Category.category(from:) ?? .others`).
@@ -45,6 +51,7 @@ class FinanceCategory {
   String iconName;
   String colorHex;
   bool isCustom;
+  TransactionType type;
 
   FinanceCategory({
     required this.id,
@@ -52,20 +59,29 @@ class FinanceCategory {
     required this.iconName,
     required this.colorHex,
     required this.isCustom,
+    this.type = TransactionType.expense,
   });
 
   String get displayName => name;
   Color get color => hexColor(colorHex);
 
   FinanceCategory copy() =>
-      FinanceCategory(id: id, name: name, iconName: iconName, colorHex: colorHex, isCustom: isCustom);
+      FinanceCategory(id: id, name: name, iconName: iconName, colorHex: colorHex, isCustom: isCustom, type: type);
 
   static final List<FinanceCategory> builtIns = [
     for (final c in builtInRaw)
       FinanceCategory(id: builtInID(c.$1), name: c.$2, iconName: c.$3, colorHex: c.$4, isCustom: false),
+    for (final c in builtInIncomeRaw)
+      FinanceCategory(
+          id: builtInID(c.$1),
+          name: c.$2,
+          iconName: c.$3,
+          colorHex: c.$4,
+          isCustom: false,
+          type: TransactionType.income),
   ];
 
-  static FinanceCategory get fallback => builtIns.last.copy();
+  static FinanceCategory get fallback => builtIns.firstWhere((c) => c.id == builtInID('others')).copy();
 
   factory FinanceCategory.fromJson(Map<String, dynamic> j) => FinanceCategory(
         id: j['id'] as String,
@@ -73,10 +89,11 @@ class FinanceCategory {
         iconName: j['iconName'] as String,
         colorHex: j['colorHex'] as String,
         isCustom: j['isCustom'] as bool? ?? false,
+        type: j['type'] == 'income' ? TransactionType.income : TransactionType.expense,
       );
 
   Map<String, dynamic> toJson() =>
-      {'id': id, 'name': name, 'iconName': iconName, 'colorHex': colorHex, 'isCustom': isCustom};
+      {'id': id, 'name': name, 'iconName': iconName, 'colorHex': colorHex, 'isCustom': isCustom, 'type': type.name};
 }
 
 class CategoryCatalogState {

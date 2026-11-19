@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inpenso/models.dart';
 import 'package:inpenso/state.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -38,8 +39,9 @@ void main() {
     for (final c in [...categories.visible]) {
       categories.hide(c);
     }
-    expect(categories.visible, hasLength(1));
-    expect(categories.preferredCategoryID('builtin-food'), categories.visible.single.id);
+    expect(categories.visible, hasLength(2)); // one per type
+    final lastExpense = categories.visibleFor(TransactionType.expense).single.id;
+    expect(categories.preferredCategoryID('builtin-food'), lastExpense);
     for (final c in [...categories.hidden]) {
       categories.restore(c);
     }
@@ -63,5 +65,55 @@ void main() {
     expect(analytics.biggestExpenseCategory, ('builtin-rent', 900.0));
     expect(analytics.insights.first.title, 'Budget Alert');
     expect(analytics.dailySpending.length, DateTime(now.year, now.month + 1, 0).day);
+  });
+
+  test('maps PocketBase bank rows and replaces only synced ones', () {
+    RecordModel row(String id, int cents, {String title = '', String cat = ''}) => RecordModel.fromJson({
+      'id': id,
+      'bookingDate': '2026-11-03 00:00:00.000Z',
+      'amountCents': cents,
+      'currency': 'EUR',
+      'description': 'POS ESSELUNGA',
+      'title': title,
+      'category': cat,
+      'expand': {
+        'account': {'id': 'a1', 'bank': 'Fineco'},
+      },
+    });
+    final cats = {'c1': 'food'};
+    final out = expenseFromPb(row('r1', -1250, cat: 'c1'), cats)!;
+    expect(
+      (out.id, out.title, out.price, out.type, out.categoryID, out.notes),
+      ('pb-r1', 'POS ESSELUNGA', 12.5, TransactionType.expense, 'builtin-food', 'Fineco'),
+    );
+    expect(out.date, DateTime(2026, 11, 3));
+    final salary = expenseFromPb(row('r2', 200000, title: 'Salary'), cats)!;
+    expect((salary.title, salary.type, salary.categoryID), ('Salary', TransactionType.income, 'builtin-salary'));
+    expect(expenseFromPb(RecordModel.fromJson({'id': 'x', 'bookingDate': ''}), cats), isNull);
+
+    final manual = expenseStore.expenses.length;
+    expenseStore.replaceRemote([out, salary]);
+    expenseStore.replaceRemote([out]); // r2 deleted on the server
+    expect(expenseStore.expenses.length, manual + 1);
+    expenseStore.replaceRemote([]);
+    expect(expenseStore.expenses.length, manual);
+  });
+
+  test('expense and income categories are separate', () {
+    final inc = TransactionType.income;
+    expect(categories.visibleFor(inc).map((c) => c.id), containsAll(['builtin-salary', 'builtin-otherIncome']));
+    expect(categories.visibleFor(TransactionType.expense).any((c) => c.type == inc), isFalse);
+    expect(legacyRaw('builtin-salary'), 'others'); // iOS export stays decodable
+
+    categories.add('Freelance', 'briefcase.fill', '#007AFF', inc);
+    final free = categories.visibleFor(inc).last;
+    expect((free.name, FinanceCategory.fromJson(free.toJson()).type), ('Freelance', inc));
+    expect(categories.preferredCategoryID('builtin-food', inc), 'builtin-salary');
+    expect(categories.forPicker('builtin-food', inc).last.id, 'builtin-food'); // old row keeps its category
+
+    for (final c in categories.visibleFor(inc)) {
+      categories.hide(c);
+    }
+    expect(categories.visibleFor(inc), hasLength(1)); // one income category always stays
   });
 }
