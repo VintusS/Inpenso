@@ -67,7 +67,7 @@ void main() {
     expect(analytics.dailySpending.length, DateTime(now.year, now.month + 1, 0).day);
   });
 
-  test('maps PocketBase bank rows and replaces only synced ones', () {
+  test('maps PocketBase rows both ways', () {
     RecordModel row(String id, int cents, {String title = '', String cat = ''}) => RecordModel.fromJson({
       'id': id,
       'bookingDate': '2026-11-03 00:00:00.000Z',
@@ -75,28 +75,34 @@ void main() {
       'currency': 'EUR',
       'description': 'POS ESSELUNGA',
       'title': title,
-      'category': cat,
+      'categoryID': cat,
+      'notes': '',
       'expand': {
         'account': {'id': 'a1', 'bank': 'Fineco'},
       },
     });
-    final cats = {'c1': 'food'};
-    final out = expenseFromPb(row('r1', -1250, cat: 'c1'), cats)!;
+    final out = expenseFromPb(row('r1', -1250, cat: 'builtin-food'))!;
     expect(
       (out.id, out.title, out.price, out.type, out.categoryID, out.notes),
-      ('pb-r1', 'POS ESSELUNGA', 12.5, TransactionType.expense, 'builtin-food', 'Fineco'),
+      ('r1', 'POS ESSELUNGA', 12.5, TransactionType.expense, 'builtin-food', 'Fineco'),
     );
-    expect(out.date, DateTime(2026, 11, 3));
-    final salary = expenseFromPb(row('r2', 200000, title: 'Salary'), cats)!;
+    expect(out.date, DateTime(2026, 11, 3)); // booking day, whatever the time zone
+    final salary = expenseFromPb(row('r2', 200000, title: 'Salary'))!;
     expect((salary.title, salary.type, salary.categoryID), ('Salary', TransactionType.income, 'builtin-salary'));
-    expect(expenseFromPb(RecordModel.fromJson({'id': 'x', 'bookingDate': ''}), cats), isNull);
+    expect(expenseFromPb(RecordModel.fromJson({'id': 'x', 'bookingDate': ''})), isNull);
 
-    final manual = expenseStore.expenses.length;
-    expenseStore.replaceRemote([out, salary]);
-    expenseStore.replaceRemote([out]); // r2 deleted on the server
-    expect(expenseStore.expenses.length, manual + 1);
-    expenseStore.replaceRemote([]);
-    expect(expenseStore.expenses.length, manual);
+    final gift = Expense(
+        title: 'Gift',
+        price: 20.1,
+        date: DateTime(2026, 5, 1, 18, 30),
+        type: TransactionType.income,
+        categoryID: 'builtin-otherIncome',
+        notes: 'n');
+    expect(pbBody(gift)['amountCents'], 2010);
+    final back = expenseFromPb(RecordModel.fromJson({'id': 'abc', ...pbBody(gift)}))!;
+    expect((back.title, back.price, back.date, back.type, back.categoryID, back.notes),
+        (gift.title, gift.price, gift.date, gift.type, gift.categoryID, gift.notes));
+    expect(RegExp(r'^[a-z0-9]{15}$').hasMatch(newPbId()), isTrue);
   });
 
   test('expense and income categories are separate', () {

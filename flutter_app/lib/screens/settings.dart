@@ -77,7 +77,7 @@ class SettingsView extends StatelessWidget {
   void _reset(BuildContext context) => showAlert(
         context,
         'Data Reset',
-        message: 'This will delete all your expenses and budgets. This action cannot be undone.',
+        message: 'This will delete all manually added transactions and budgets. Bank transactions are kept. This action cannot be undone.',
         actions: [
           CupertinoDialogAction(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           CupertinoDialogAction(

@@ -130,7 +130,7 @@ class _TransactionsViewState extends State<TransactionsView> {
           LargeTitlePage(
             title: 'Transactions',
             background: context.groupedBg,
-            onRefresh: () async => expenseStore.reload(),
+            onRefresh: () => pocketBase.sync(),
             leading: _toolbarFilters(context),
             trailing: CupertinoButton(padding: EdgeInsets.zero, onPressed: _add, child: const Icon(CupertinoIcons.add)),
             bottom: PreferredSize(
