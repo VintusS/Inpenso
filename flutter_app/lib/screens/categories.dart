@@ -18,13 +18,16 @@ class CategoryManagementView extends StatefulWidget {
 
 class _CategoryManagementViewState extends State<CategoryManagementView> {
   String? dragged, targeted;
+  TransactionType type = TransactionType.expense;
 
-  void _edit(FinanceCategory? c) => showSheet(context, CategoryEditor(category: c));
+  void _edit(FinanceCategory? c) => showSheet(context, CategoryEditor(category: c, type: type));
 
   void _hide(FinanceCategory c) {
     categories.hide(c);
     settings.normalizeDefaultCategory();
   }
+
+  List<FinanceCategory> get hidden => categories.hidden.where((c) => c.type == type).toList();
 
   @override
   Widget build(BuildContext context) => StoreBuilder(
@@ -41,8 +44,15 @@ class _CategoryManagementViewState extends State<CategoryManagementView> {
               child: constrained(Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  _section('Visible', categories.visible, false),
-                  if (categories.hidden.isNotEmpty) ...[gap(24), _section('Hidden', categories.hidden, true)],
+                  Segmented(
+                    values: TransactionType.values,
+                    label: (t) => t == TransactionType.expense ? 'Expenses' : 'Incomes',
+                    selected: type,
+                    onChanged: (t) => setState(() => type = t),
+                  ),
+                  gap(16),
+                  _section('Visible', categories.visibleFor(type), false),
+                  if (hidden.isNotEmpty) ...[gap(24), _section('Hidden', hidden, true)],
                 ]),
               )),
             ),
@@ -210,8 +220,9 @@ class _DragPreview extends StatelessWidget {
 }
 
 class CategoryEditor extends StatefulWidget {
-  const CategoryEditor({super.key, this.category});
+  const CategoryEditor({super.key, this.category, this.type = TransactionType.expense});
   final FinanceCategory? category;
+  final TransactionType type;
   @override
   State<CategoryEditor> createState() => _CategoryEditorState();
 }
@@ -221,6 +232,7 @@ class _CategoryEditorState extends State<CategoryEditor> {
   late final name = TextEditingController(text: c?.name ?? '');
   late String icon = c?.iconName ?? 'tag.fill';
   late String color = c?.colorHex ?? '#007AFF';
+  late TransactionType type = c?.type ?? widget.type;
 
   void _save() {
     final n = name.text.trim();
@@ -232,9 +244,10 @@ class _CategoryEditorState extends State<CategoryEditor> {
       categories.update(c!.copy()
         ..name = n
         ..iconName = icon
-        ..colorHex = color);
+        ..colorHex = color
+        ..type = type);
     } else {
-      categories.add(n, icon, color);
+      categories.add(n, icon, color, type);
     }
     Navigator.pop(context);
   }
@@ -266,6 +279,17 @@ class _CategoryEditorState extends State<CategoryEditor> {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               child: CupertinoTextField.borderless(controller: name, placeholder: 'Name', padding: const EdgeInsets.all(12)),
             ),
+            // Built-ins keep their type; only new and custom categories can switch.
+            if (c == null || c!.isCustom)
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Segmented(
+                  values: TransactionType.values,
+                  label: (t) => t.displayName,
+                  selected: type,
+                  onChanged: (t) => setState(() => type = t),
+                ),
+              ),
           ]),
           CupertinoListSection.insetGrouped(header: SectionLabel('ICON'), children: [
             grid(5, [

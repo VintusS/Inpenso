@@ -395,7 +395,7 @@ class _TransactionsViewState extends State<TransactionsView> {
   Widget _snackbar(BuildContext context) => Positioned(
         left: 16,
         right: 16,
-        bottom: 8,
+        bottom: 8 + MediaQuery.paddingOf(context).bottom,
         child: constrained(TweenAnimationBuilder<double>(
           tween: Tween(begin: 1, end: 0),
           duration: const Duration(milliseconds: 300),

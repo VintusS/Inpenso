@@ -23,6 +23,13 @@ class _TransactionFormState extends State<TransactionForm> {
   late TransactionType type = e?.type ?? TransactionType.expense;
   late DateTime date = e?.date ?? DateTime.now();
   late String categoryID = e?.categoryID ?? categories.preferredCategoryID(settings.defaultCategoryID);
+
+  void _setType(TransactionType t) => setState(() {
+        type = t;
+        if (categories.category(categoryID).type != t) {
+          categoryID = categories.preferredCategoryID(t == TransactionType.expense ? settings.defaultCategoryID : null, t);
+        }
+      });
   bool success = false;
 
   @override
@@ -109,7 +116,7 @@ class _TransactionFormState extends State<TransactionForm> {
             values: TransactionType.values,
             label: (t) => t.displayName,
             selected: type,
-            onChanged: (t) => setState(() => type = t),
+            onChanged: _setType,
           ),
           gap(),
           TextFormFieldIOS(
@@ -129,7 +136,7 @@ class _TransactionFormState extends State<TransactionForm> {
         listenable: categories,
         builder: (_, _) => CategoryGrid(
           selectedID: categoryID,
-          categories: isEdit ? categories.forPicker(categoryID) : categories.visible,
+          categories: categories.forPicker(categoryID, type),
           onSelected: (id) => setState(() => categoryID = id),
         ),
       ),

@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show ThemeMode, Color, IconData;
 import 'package:intl/intl.dart';
+import 'package:pocketbase/pocketbase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models.dart';
@@ -139,13 +140,14 @@ class CategoryStore extends ChangeNotifier {
   }
 
   List<FinanceCategory> get visible => _ordered(false);
+  List<FinanceCategory> visibleFor(TransactionType t) => visible.where((c) => c.type == t).toList();
   List<FinanceCategory> get hidden =>
       _ordered(true).where((c) => _state.hiddenCategoryIDs.contains(c.id)).toList();
 
   FinanceCategory category(String id) => _map[id] ?? FinanceCategory.fallback;
 
-  List<FinanceCategory> forPicker(String? including) {
-    final list = visible;
+  List<FinanceCategory> forPicker(String? including, TransactionType type) {
+    final list = visibleFor(type);
     final c = including == null || including.isEmpty ? null : _map[including];
     if (c != null && !list.any((x) => x.id == including)) list.add(c);
     return list;
@@ -165,15 +167,15 @@ class CategoryStore extends ChangeNotifier {
     return [...ordered, ...rest];
   }
 
-  String preferredCategoryID(String? id) {
-    if (id != null && !_state.hiddenCategoryIDs.contains(id) && _map[id] != null) return id;
-    final v = visible;
+  String preferredCategoryID(String? id, [TransactionType type = TransactionType.expense]) {
+    if (id != null && !_state.hiddenCategoryIDs.contains(id) && _map[id]?.type == type) return id;
+    final v = visibleFor(type);
     return v.isNotEmpty ? v.first.id : FinanceCategory.fallback.id;
   }
 
-  void add(String name, String icon, String colorHex) {
+  void add(String name, String icon, String colorHex, [TransactionType type = TransactionType.expense]) {
     final c = FinanceCategory(
-        id: 'custom-${newUUID()}', name: name.trim(), iconName: icon, colorHex: colorHex, isCustom: true);
+        id: 'custom-${newUUID()}', name: name.trim(), iconName: icon, colorHex: colorHex, isCustom: true, type: type);
     _state.customCategories.add(c);
     _state.orderedCategoryIDs.add(c.id);
     _save();
@@ -185,7 +187,9 @@ class CategoryStore extends ChangeNotifier {
       if (i < 0) return;
       _state.customCategories[i] = c.copy()..isCustom = true;
     } else if (_builtInIDs.contains(c.id)) {
-      _state.builtInOverrides[c.id] = c.copy()..isCustom = false;
+      _state.builtInOverrides[c.id] = c.copy()
+        ..isCustom = false
+        ..type = _map[c.id]!.type; // built-ins keep their type
     } else {
       return;
     }
@@ -193,7 +197,8 @@ class CategoryStore extends ChangeNotifier {
   }
 
   void hide(FinanceCategory c) {
-    if (_map[c.id] == null || _state.hiddenCategoryIDs.contains(c.id) || visible.length <= 1) return;
+    // Keep at least one visible category per type so each picker has a choice.
+    if (_map[c.id] == null || _state.hiddenCategoryIDs.contains(c.id) || visibleFor(c.type).length <= 1) return;
     _state.hiddenCategoryIDs.add(c.id);
     _save();
   }
@@ -281,6 +286,93 @@ class ExpenseStore extends ChangeNotifier {
   void reload() {
     expenses = Storage.loadExpenses();
     notifyListeners();
+  }
+
+  /// PocketBase is the source of truth for synced rows: replace them all, keep manual ones.
+  void replaceRemote(List<Expense> remote) {
+    expenses = [...expenses.where((e) => !e.id.startsWith(pbPrefix)), ...remote];
+    save();
+  }
+}
+
+// ---------------------------------------------------------------- PocketBase bank sync
+
+const pbPrefix = 'pb-';
+
+/// Maps a finance-tracker `transactions` row (bank data from Enable Banking) to an Expense.
+/// [catNames] maps PocketBase category id -> name; matched to a local category by name, else Others.
+Expense? expenseFromPb(RecordModel r, Map<String, String> catNames) {
+  final booked = DateTime.tryParse(r.getStringValue('bookingDate'));
+  if (booked == null) return null;
+  final cents = r.getIntValue('amountCents');
+  final title = r.getStringValue('title');
+  final type = cents > 0 ? TransactionType.income : TransactionType.expense;
+  final catName = catNames[r.getStringValue('category')]?.toLowerCase();
+  final local = categories.visibleFor(type).where((c) => c.displayName.toLowerCase() == catName);
+  final bank = r.getStringValue('expand.account.bank');
+  return Expense(
+    id: '$pbPrefix${r.id}',
+    title: title.isNotEmpty ? title : r.getStringValue('description'),
+    // shortcut: ignores the row's currency (assumes it matches the app currency); convert if accounts differ.
+    price: cents.abs() / 100,
+    date: DateTime(booked.year, booked.month, booked.day),
+    type: type,
+    categoryID: local.isEmpty ? categories.preferredCategoryID(null, type) : local.first.id,
+    notes: bank.isEmpty ? null : bank,
+  );
+}
+
+class PocketBaseStore extends ChangeNotifier {
+  late PocketBase pb = _client(url);
+  String? error;
+  bool syncing = false;
+
+  String get url => _prefs.getString('pbUrl') ?? '';
+  bool get connected => url.isNotEmpty && pb.authStore.isValid;
+  String get email => pb.authStore.record?.getStringValue('email') ?? '';
+
+  // Only the auth token is persisted, never the password.
+  static PocketBase _client(String url) => PocketBase(url,
+      authStore: AsyncAuthStore(
+        initial: _prefs.getString('pbAuth'),
+        save: (s) => _prefs.setString('pbAuth', s),
+        clear: () => _prefs.remove('pbAuth'),
+      ));
+
+  /// Throws ClientException on bad URL/credentials so the login form can show it.
+  Future<void> connect(String serverUrl, String email, String password) async {
+    final client = _client(serverUrl.trim());
+    await client.collection('users').authWithPassword(email.trim(), password);
+    await _prefs.setString('pbUrl', serverUrl.trim());
+    pb = client;
+    await sync();
+  }
+
+  void disconnect() {
+    pb.authStore.clear();
+    expenseStore.replaceRemote([]);
+    notifyListeners();
+  }
+
+  Future<void> sync() async {
+    if (!connected || syncing) return;
+    syncing = true;
+    notifyListeners();
+    try {
+      await pb.collection('users').authRefresh(); // keeps the token alive while the app is used
+      final cats = {
+        for (final c in await pb.collection('categories').getFullList()) c.id: c.getStringValue('name'),
+      };
+      final rows = await pb.collection('transactions').getFullList(expand: 'account');
+      expenseStore.replaceRemote([for (final r in rows) ?expenseFromPb(r, cats)]);
+      error = null;
+    } on ClientException catch (e) {
+      if (e.statusCode == 401) pb.authStore.clear();
+      error = (e.response['message'] as String?) ?? 'Cannot reach the server.';
+    } finally {
+      syncing = false;
+      notifyListeners();
+    }
   }
 }
 
@@ -511,6 +603,7 @@ late final SettingsStore settings;
 late final CategoryStore categories;
 late final ExpenseStore expenseStore;
 late final AnalyticsStore analytics;
+late final PocketBaseStore pocketBase;
 
 Future<void> initStores() async {
   await initStorage();
@@ -518,6 +611,8 @@ Future<void> initStores() async {
   categories = CategoryStore();
   expenseStore = ExpenseStore();
   analytics = AnalyticsStore();
+  pocketBase = PocketBaseStore();
+  pocketBase.sync(); // background; no-op when not connected
 }
 
 /// Export payload in the iOS format (pretty-printed array of expenses).

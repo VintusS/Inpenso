@@ -116,6 +116,8 @@ class LargeTitlePage extends StatelessWidget {
         ),
         if (onRefresh != null) CupertinoSliverRefreshControl(onRefresh: onRefresh),
         ...slivers,
+        // CustomScrollView ignores the inset the floating tab bar reserves, so add it explicitly.
+        SliverToBoxAdapter(child: SizedBox(height: MediaQuery.paddingOf(context).bottom)),
       ]),
     );
   }
@@ -641,7 +643,7 @@ class StoreBuilder extends StatelessWidget {
   final WidgetBuilder builder;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: Listenable.merge([settings, categories, expenseStore, analytics]),
+        listenable: Listenable.merge([settings, categories, expenseStore, analytics, pocketBase]),
         builder: (context, _) => builder(context),
       );
 }
