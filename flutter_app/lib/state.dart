@@ -37,7 +37,7 @@ class Storage {
   static Map<String, double> loadBudgets() =>
       _read(_budgets, (d) => {for (final e in (d as Map).entries) e.key as String: (e.value as num).toDouble()}) ??
       {};
-  static void saveBudgets(Map<String, double> b) => _prefs.setString(_budgets, jsonEncode(b));
+  static void saveBudgets(Map<String, double> b) => put(_budgets, jsonEncode(b));
 
   static List<FinanceCategory> loadCustomCategories() =>
       _read(_custom, (d) => [for (final c in d as List) FinanceCategory.fromJson(c)]) ?? [];
@@ -45,7 +45,13 @@ class Storage {
       _prefs.setString(_custom, jsonEncode([for (final x in c) x.toJson()]));
 
   static CategoryCatalogState? loadCatalog() => _read(_catalog, (d) => CategoryCatalogState.fromJson(d));
-  static void saveCatalog(CategoryCatalogState s) => _prefs.setString(_catalog, jsonEncode(s.toJson()));
+  static void saveCatalog(CategoryCatalogState s) => put(_catalog, jsonEncode(s.toJson()));
+
+  /// Writes a synced preference locally and to PocketBase (when connected).
+  static void put(String key, String value) {
+    _prefs.setString(key, value);
+    _remote?.putPref(key, value);
+  }
 }
 
 const availableCurrencies = [
@@ -73,28 +79,42 @@ enum AppTheme {
 }
 
 class SettingsStore extends ChangeNotifier {
-  String _currency = _prefs.getString('selectedCurrency') ?? 'USD';
-  String _defaultCategoryID = _prefs.getString('defaultCategoryID') ?? builtInID('food');
-  AppTheme _theme = AppTheme.values.asNameMap()[_prefs.getString('selectedTheme')] ?? AppTheme.system;
+  late String _currency, _defaultCategoryID;
+  late AppTheme _theme;
+
+  SettingsStore() {
+    _load();
+  }
+
+  void _load() {
+    _currency = _prefs.getString('selectedCurrency') ?? 'USD';
+    _defaultCategoryID = _prefs.getString('defaultCategoryID') ?? builtInID('food');
+    _theme = AppTheme.values.asNameMap()[_prefs.getString('selectedTheme')] ?? AppTheme.system;
+  }
+
+  void reload() {
+    _load();
+    notifyListeners();
+  }
 
   String get currency => _currency;
   set currency(String v) {
     _currency = v;
-    _prefs.setString('selectedCurrency', v);
+    Storage.put('selectedCurrency', v);
     notifyListeners();
   }
 
   String get defaultCategoryID => _defaultCategoryID;
   set defaultCategoryID(String v) {
     _defaultCategoryID = v;
-    _prefs.setString('defaultCategoryID', v);
+    Storage.put('defaultCategoryID', v);
     notifyListeners();
   }
 
   AppTheme get theme => _theme;
   set theme(AppTheme v) {
     _theme = v;
-    _prefs.setString('selectedTheme', v.name);
+    Storage.put('selectedTheme', v.name);
     notifyListeners();
   }
 
@@ -122,6 +142,20 @@ class CategoryStore extends ChangeNotifier {
       );
       _save();
     }
+  }
+
+  void reload() {
+    final saved = Storage.loadCatalog();
+    if (saved == null) return;
+    _state = _normalized(saved);
+    notifyListeners();
+  }
+
+  void addAll(List<FinanceCategory> custom) {
+    if (custom.isEmpty) return;
+    _state.customCategories.addAll(custom);
+    _state.orderedCategoryIDs.addAll([for (final c in custom) c.id]);
+    _save();
   }
 
   static final _builtInIDs = {for (final c in FinanceCategory.builtIns) c.id};
@@ -278,54 +312,79 @@ class ExpenseStore extends ChangeNotifier {
     save();
   }
 
+  /// Caches locally and pushes the changes to PocketBase (when connected).
   void save() {
+    replaceAll(expenses);
+    _remote?.pushExpenses();
+  }
+
+  /// Sets the list (e.g. from the server) without pushing it back.
+  void replaceAll(List<Expense> list) {
+    expenses = list;
     Storage.saveExpenses(expenses);
     notifyListeners();
   }
-
-  void reload() {
-    expenses = Storage.loadExpenses();
-    notifyListeners();
-  }
-
-  /// PocketBase is the source of truth for synced rows: replace them all, keep manual ones.
-  void replaceRemote(List<Expense> remote) {
-    expenses = [...expenses.where((e) => !e.id.startsWith(pbPrefix)), ...remote];
-    save();
-  }
 }
 
-// ---------------------------------------------------------------- PocketBase bank sync
+// ---------------------------------------------------------------- PocketBase (source of truth)
 
-const pbPrefix = 'pb-';
+/// Set once the PocketBase store exists; stores push their writes through it.
+PocketBaseStore? _remote;
 
-/// Maps a finance-tracker `transactions` row (bank data from Enable Banking) to an Expense.
-/// [catNames] maps PocketBase category id -> name; matched to a local category by name, else Others.
-Expense? expenseFromPb(RecordModel r, Map<String, String> catNames) {
-  final booked = DateTime.tryParse(r.getStringValue('bookingDate'));
-  if (booked == null) return null;
+/// Preferences that live on the server (key = SharedPreferences key).
+const syncedPrefs = ['categoryCatalogState', 'budgets', 'selectedCurrency', 'defaultCategoryID', 'selectedTheme'];
+
+final _pbId = RegExp(r'^[a-z0-9]{15}$');
+
+/// A PocketBase record id, so a new row keeps the same id locally and on the server.
+String newPbId() {
+  const a = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  final r = Random.secure();
+  return String.fromCharCodes([for (var i = 0; i < 15; i++) a.codeUnitAt(r.nextInt(a.length))]);
+}
+
+/// `transactions` row (bank from finance-tracker, or manual) -> Expense.
+/// Dates are wall-clock time tagged as UTC, so a bank booking day stays the same day in any time zone.
+Expense? expenseFromPb(RecordModel r) {
+  final d = DateTime.tryParse(r.getStringValue('bookingDate'));
+  if (d == null) return null;
   final cents = r.getIntValue('amountCents');
-  final title = r.getStringValue('title');
   final type = cents > 0 ? TransactionType.income : TransactionType.expense;
-  final catName = catNames[r.getStringValue('category')]?.toLowerCase();
-  final local = categories.visibleFor(type).where((c) => c.displayName.toLowerCase() == catName);
+  final title = r.getStringValue('title'), notes = r.getStringValue('notes'), cat = r.getStringValue('categoryID');
   final bank = r.getStringValue('expand.account.bank');
   return Expense(
-    id: '$pbPrefix${r.id}',
+    id: r.id,
     title: title.isNotEmpty ? title : r.getStringValue('description'),
     // shortcut: ignores the row's currency (assumes it matches the app currency); convert if accounts differ.
     price: cents.abs() / 100,
-    date: DateTime(booked.year, booked.month, booked.day),
+    date: DateTime(d.year, d.month, d.day, d.hour, d.minute, d.second),
     type: type,
-    categoryID: local.isEmpty ? categories.preferredCategoryID(null, type) : local.first.id,
-    notes: bank.isEmpty ? null : bank,
+    categoryID: cat.isNotEmpty ? cat : categories.preferredCategoryID(null, type),
+    notes: notes.isNotEmpty ? notes : (bank.isEmpty ? null : bank),
   );
 }
+
+/// Expense -> the `transactions` fields Inpenso owns (bank fields like description are never touched).
+Map<String, dynamic> pbBody(Expense e) => {
+      'title': e.title,
+      'amountCents': (e.price * 100).round() * (e.type == TransactionType.income ? 1 : -1),
+      'bookingDate':
+          DateTime.utc(e.date.year, e.date.month, e.date.day, e.date.hour, e.date.minute, e.date.second).toIso8601String(),
+      'categoryID': e.categoryID,
+      'notes': e.notes ?? '',
+    };
 
 class PocketBaseStore extends ChangeNotifier {
   late PocketBase pb = _client(url);
   String? error;
   bool syncing = false;
+  final _pushed = <String, String>{}; // transaction id -> jsonEncode(pbBody) last known on the server
+  final _prefIds = <String, String>{}; // pref key -> record id
+  Future<void> _queue = Future.value();
+
+  PocketBaseStore() {
+    _remote = this;
+  }
 
   String get url => _prefs.getString('pbUrl') ?? '';
   bool get connected => url.isNotEmpty && pb.authStore.isValid;
@@ -350,30 +409,150 @@ class PocketBaseStore extends ChangeNotifier {
 
   void disconnect() {
     pb.authStore.clear();
-    expenseStore.replaceRemote([]);
+    _pushed.clear();
+    _prefIds.clear();
+    expenseStore.replaceAll([]); // the data lives on the server
     notifyListeners();
   }
+
+  /// Runs server work one at a time, in order (a delete and its undo must not race).
+  Future<void> _enqueue(Future<void> Function() f) => _queue = _queue.then((_) async {
+        try {
+          await f();
+          error = null;
+        } on ClientException catch (e) {
+          if (e.statusCode == 401) pb.authStore.clear();
+          error = (e.response['message'] as String?) ?? 'Cannot reach the server.';
+        } catch (e) {
+          error = '$e';
+        } finally {
+          notifyListeners();
+        }
+      });
 
   Future<void> sync() async {
     if (!connected || syncing) return;
     syncing = true;
     notifyListeners();
-    try {
-      await pb.collection('users').authRefresh(); // keeps the token alive while the app is used
-      final cats = {
-        for (final c in await pb.collection('categories').getFullList()) c.id: c.getStringValue('name'),
-      };
-      final rows = await pb.collection('transactions').getFullList(expand: 'account');
-      expenseStore.replaceRemote([for (final r in rows) ?expenseFromPb(r, cats)]);
-      error = null;
-    } on ClientException catch (e) {
-      if (e.statusCode == 401) pb.authStore.clear();
-      error = (e.response['message'] as String?) ?? 'Cannot reach the server.';
-    } finally {
-      syncing = false;
-      notifyListeners();
-    }
+    await _enqueue(_pull);
+    syncing = false;
+    notifyListeners();
   }
+
+  /// Server wins. Data that exists only on this device (first connect) is uploaded.
+  Future<void> _pull() async {
+    await pb.collection('users').authRefresh(); // keeps the token alive while the app is used
+    final server = {for (final r in await pb.collection('prefs').getFullList()) r.getStringValue('key'): r};
+    final rows = await pb.collection('transactions').getFullList(expand: 'account');
+    final remap = server.containsKey('categoryCatalogState') ? <String, String>{} : _adoptLegacyCategories(
+        await pb.collection('categories').getFullList(), rows);
+
+    _prefIds
+      ..clear()
+      ..addAll({for (final e in server.entries) e.key: e.value.id});
+    for (final k in syncedPrefs) {
+      final local = _prefs.getString(k);
+      if (server[k] != null) {
+        await _prefs.setString(k, server[k]!.getStringValue('value'));
+      } else if (local != null) {
+        _prefIds[k] = (await pb.collection('prefs').create(body: {'key': k, 'value': local})).id;
+      }
+    }
+    settings.reload();
+    categories.reload();
+    analytics.reloadBudgets();
+
+    final remote = [for (final r in rows) ?expenseFromPb(r)];
+    _pushed
+      ..clear()
+      ..addAll({for (final e in remote) e.id: jsonEncode(pbBody(e))});
+    // Applied after the snapshot, so the remapped rows get pushed below.
+    for (final e in remote) {
+      e.categoryID = remap[e.categoryID] ?? e.categoryID;
+    }
+    // Added before connecting (not a PocketBase id; 'pb-' rows are the old read-only bank cache).
+    final localOnly = [
+      for (final e in expenseStore.expenses)
+        if (!_pbId.hasMatch(e.id) && !e.id.startsWith('pb-')) e
+    ];
+    expenseStore.replaceAll([...remote, ...localOnly]);
+    if (remap.isNotEmpty || localOnly.isNotEmpty) await _pushExpenses();
+  }
+
+  /// First connect: the old finance-tracker categories become Inpenso categories (same id, so rows keep
+  /// pointing at them); one named like an existing category maps to it instead. Returns old id -> new id.
+  Map<String, String> _adoptLegacyCategories(List<RecordModel> legacy, List<RecordModel> rows) {
+    final remap = <String, String>{}, added = <FinanceCategory>[];
+    for (final c in legacy) {
+      final name = c.getStringValue('name'), color = c.getIntValue('color') & 0xFFFFFF;
+      final used = rows.where((r) => r.getStringValue('categoryID') == c.id);
+      final type = used.isNotEmpty && used.every((r) => r.getIntValue('amountCents') > 0)
+          ? TransactionType.income
+          : TransactionType.expense;
+      final same = categories.visibleFor(type).where((x) => x.displayName.toLowerCase() == name.toLowerCase());
+      if (same.isNotEmpty) {
+        remap[c.id] = same.first.id;
+      } else {
+        added.add(FinanceCategory(
+            id: c.id,
+            name: name,
+            iconName: 'tag.fill',
+            colorHex: color == 0 ? '#8E8E93' : '#${color.toRadixString(16).padLeft(6, '0')}',
+            isCustom: true,
+            type: type));
+      }
+    }
+    categories.addAll(added);
+    return remap;
+  }
+
+  void putPref(String key, String value) {
+    if (!connected) return;
+    _enqueue(() async {
+      final id = _prefIds[key];
+      if (id != null) {
+        await pb.collection('prefs').update(id, body: {'value': value});
+      } else {
+        _prefIds[key] = (await pb.collection('prefs').create(body: {'key': key, 'value': value})).id;
+      }
+    });
+  }
+
+  void pushExpenses() {
+    if (connected) _enqueue(_pushExpenses);
+  }
+
+  /// Diffs the local list against the last server state: creates, updates and deletes what changed.
+  Future<void> _pushExpenses() async {
+    final col = pb.collection('transactions'), live = <String>{};
+    for (final e in [...expenseStore.expenses]) {
+      if (!_pbId.hasMatch(e.id)) e.id = newPbId(); // UUIDs from the form or an iOS import
+      live.add(e.id);
+      final body = pbBody(e), fp = jsonEncode(body), old = _pushed[e.id];
+      if (old == fp) continue;
+      if (old == null) {
+        await col.create(body: {...body, 'id': e.id, 'currency': settings.currency});
+      } else {
+        await col.update(e.id, body: body);
+      }
+      _pushed[e.id] = fp;
+    }
+    for (final id in [..._pushed.keys]) {
+      if (live.contains(id)) continue;
+      await col.delete(id);
+      _pushed.remove(id);
+    }
+    Storage.saveExpenses(expenseStore.expenses); // ids may have changed
+  }
+
+  /// Bank rows have a providerId; everything else was entered by hand.
+  void deleteManual() => _enqueue(() async {
+        final col = pb.collection('transactions');
+        for (final r in await col.getFullList(filter: 'providerId = ""', fields: 'id')) {
+          await col.delete(r.id);
+        }
+        await _pull();
+      });
 }
 
 // ---------------------------------------------------------------- Analytics
@@ -619,20 +798,25 @@ Future<void> initStores() async {
 Uint8List exportJson() => Uint8List.fromList(
     utf8.encode(const JsonEncoder.withIndent('  ').convert([for (final e in Storage.loadExpenses()) e.toJson()])));
 
+/// Merges an export by id: re-importing an export updates rows instead of duplicating them.
 bool importJson(List<int> bytes) {
   try {
     final list = [for (final e in jsonDecode(utf8.decode(bytes)) as List) Expense.fromJson(e)];
-    Storage.saveExpenses(list);
-    expenseStore.reload();
+    expenseStore.expenses = {for (final e in expenseStore.expenses) e.id: e, for (final e in list) e.id: e}.values.toList();
+    expenseStore.save();
     return true;
   } catch (_) {
     return false;
   }
 }
 
+/// Deletes manual transactions and budgets; bank transactions stay (they cannot be re-downloaded).
 void resetAllData() {
-  Storage.saveExpenses([]);
   Storage.saveBudgets({});
-  expenseStore.reload();
   analytics.reloadBudgets();
+  if (pocketBase.connected) {
+    pocketBase.deleteManual();
+  } else {
+    expenseStore.replaceAll([]);
+  }
 }
