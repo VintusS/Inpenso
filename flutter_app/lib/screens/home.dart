@@ -17,22 +17,12 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  bool showRecent = true;
   static const recentDays = 7;
 
   @override
   Widget build(BuildContext context) => StoreBuilder(
         builder: (context) => LargeTitlePage(
           title: 'Home',
-          trailing: CupertinoButton(
-            padding: EdgeInsets.zero,
-            onPressed: () => showSheet(context, const TransactionForm()),
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(CupertinoIcons.add, size: 20),
-              SizedBox(width: 4),
-              Text('Add', style: TextStyle(fontSize: 16, fontWeight: semibold)),
-            ]),
-          ),
           slivers: [
             SliverToBoxAdapter(
               child: constrained(Padding(
@@ -44,7 +34,7 @@ class _HomeViewState extends State<HomeView> {
                   gap(20),
                   _FadeIn(offset: -20, child: _categoryBreakdown(context)),
                   gap(20),
-                  _FadeIn(offset: -10, child: _recentTransactions(context)),
+                  _FadeIn(offset: -10, child: _uncategorized(context)),
                 ]),
               )),
             ),
@@ -185,70 +175,64 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _recentTransactions(BuildContext context) {
-    final recent = [...expenseStore.expenses]..sort((a, b) => b.date.compareTo(a.date));
-    final top = recent.take(5).toList();
+  /// Bank rows waiting for a category (both types); they stay out of the figures above until then.
+  Widget _uncategorized(BuildContext context) {
+    final list = [for (final e in expenseStore.expenses) if (e.categoryID.isEmpty && !e.transfer) e]
+      ..sort((a, b) => b.date.compareTo(a.date));
     return Box(
       radius: 20,
       shadow: true,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          const Expanded(child: Text('Recent Transactions', style: Font.headline)),
-          GestureDetector(
-            onTap: () => setState(() => showRecent = !showRecent),
-            child: Row(children: [
-              Icon(showRecent ? CupertinoIcons.chevron_up : CupertinoIcons.chevron_down,
-                  size: 12, color: context.secondaryLabel),
-              gap(4),
-              Sec(showRecent ? 'Hide ' : 'Show', style: Font.caption),
-            ]),
-          ),
+          const Expanded(child: Text('Uncategorized', style: Font.headline)),
+          if (list.isNotEmpty) Sec('${list.length}', style: Font.subheadline),
         ]),
         gap(12),
-        if (showRecent)
-          if (top.isEmpty)
-            const Center(child: Sec('No transactions yet', style: Font.body))
-          else ...[
-            for (final (i, e) in top.indexed) ...[
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => showSheet(context, TransactionForm(expense: e)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Row(children: [
-                    IconBadge(categories.category(e.categoryID), size: 28, iconSize: 14, radius: 6),
-                    gap(12),
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(e.title, style: Font.subheadline.copyWith(fontWeight: medium)),
-                        gap(2),
-                        Sec(DateFormat.yMMMMd().format(e.date), style: Font.caption),
-                      ]),
-                    ),
-                    Text(amountText(e),
-                        style: Font.subheadline.copyWith(fontWeight: semibold, color: amountColor(context, e))),
-                  ]),
-                ),
-              ),
-              if (i < top.length - 1) const Padding(padding: EdgeInsets.only(left: 40), child: Divider()),
-            ],
-            gap(8),
+        if (list.isEmpty)
+          const Center(child: Sec('All transactions have a category', style: Font.body))
+        else
+          for (final (i, e) in list.indexed) ...[
             GestureDetector(
-              onTap: widget.onViewAll,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: context.accent, width: 1.5),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text('View All Transactions',
-                      style: Font.subheadline.copyWith(fontWeight: medium, color: context.accent)),
-                ),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => showSheet(context, TransactionForm(key: ValueKey(e.id), expense: e)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(children: [
+                  IconBadge(FinanceCategory.uncategorized, size: 34, iconSize: 18, radius: 7),
+                  gap(12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(e.title, style: Font.subheadline.copyWith(fontWeight: medium)),
+                      gap(2),
+                      Row(children: [
+                        Flexible(child: Sec([DateFormat.yMMMMd().format(e.date), ?e.account].join('  •  '), style: Font.caption)),
+                        if (e.account != null) ...[gap(6), BankBadge(e.account!, size: 14)],
+                      ]),
+                    ]),
+                  ),
+                  Text(amountText(e),
+                      style: Font.subheadline.copyWith(fontWeight: semibold, color: amountColor(context, e))),
+                ]),
               ),
             ),
+            if (i < list.length - 1) const Padding(padding: EdgeInsets.only(left: 40), child: Divider()),
           ],
+        gap(8),
+        GestureDetector(
+          onTap: widget.onViewAll,
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: context.accent, width: 1.5),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text('View All Transactions',
+                  style: Font.subheadline.copyWith(fontWeight: medium, color: context.accent)),
+            ),
+          ),
+        ),
       ]),
     );
   }
@@ -256,7 +240,7 @@ class _HomeViewState extends State<HomeView> {
 
 String amountText(Expense e) => '${e.type == TransactionType.income ? '+' : ''}${settings.money(e.price)}';
 Color amountColor(BuildContext context, Expense e) =>
-    e.type == TransactionType.income ? context.c(SysColor.green) : context.label;
+    e.transfer ? context.secondaryLabel : e.type == TransactionType.income ? context.c(SysColor.green) : context.label;
 
 /// Slide + fade in on first appearance, like the iOS card animation.
 class _FadeIn extends StatelessWidget {

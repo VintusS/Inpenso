@@ -259,7 +259,7 @@ Color budgetColor(double progress) => progress < 0.75 ? SysColor.blue : (progres
 
 /// White icon on a colored rounded square or circle.
 class IconBadge extends StatelessWidget {
-  const IconBadge(this.category, {super.key, this.size = 30, this.iconSize = 16, this.radius = 8, this.circle = false});
+  const IconBadge(this.category, {super.key, this.size = 36, this.iconSize = 20, this.radius = 9, this.circle = false});
   final FinanceCategory category;
   final double size, iconSize, radius;
   final bool circle;
@@ -274,6 +274,32 @@ class IconBadge extends StatelessWidget {
         ),
         child: Icon(sfIcon(category.iconName), size: iconSize, color: Colors.white),
       );
+}
+
+/// Mark for the bank a row comes from: brand color + initial, or a generic bank icon.
+// ponytail: initials, not the real logos; switch to Image.asset if logo files get added to the app.
+class BankBadge extends StatelessWidget {
+  const BankBadge(this.bank, {super.key, this.size = 16});
+  final String bank;
+  final double size;
+  @override
+  Widget build(BuildContext context) {
+    final b = bank.toLowerCase();
+    final (String? letter, Color bg, Color fg) = b.contains('revolut')
+        ? ('R', context.label, context.bg) // black/white like the Revolut logo, inverted in dark mode
+        : b.contains('fineco')
+            ? ('F', const Color(0xFF00549F), Colors.white)
+            : (null, context.bg3, context.secondaryLabel);
+    return Container(
+      width: size,
+      height: size,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(size * 0.25)),
+      child: letter == null
+          ? Icon(CupertinoIcons.building_2_fill, size: size * 0.7, color: fg)
+          : Text(letter, style: TextStyle(color: fg, fontSize: size * 0.68, fontWeight: bold, height: 1)),
+    );
+  }
 }
 
 Widget dot(Color color, [double size = 12]) =>
@@ -429,7 +455,7 @@ class CategoryButton extends StatelessWidget {
                       ? [BoxShadow(color: category.color.withValues(alpha: 0.6), blurRadius: 10)]
                       : null,
                 ),
-                child: Icon(sfIcon(category.iconName), size: 22, color: Colors.white),
+                child: Icon(sfIcon(category.iconName), size: 28, color: Colors.white),
               ),
               gap(6),
               SizedBox(

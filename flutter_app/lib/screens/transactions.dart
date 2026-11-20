@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -25,12 +23,17 @@ enum SortOption {
 enum TransactionFilter {
   all('All'),
   expenses('Expenses'),
-  incomes('Incomes');
+  incomes('Incomes'),
+  transfers('Transfers');
 
   const TransactionFilter(this.label);
   final String label;
-  bool matches(Expense e) =>
-      this == all || (this == expenses ? e.type == TransactionType.expense : e.type == TransactionType.income);
+  bool matches(Expense e) => switch (this) {
+        all => true,
+        transfers => e.transfer,
+        expenses => !e.transfer && e.type == TransactionType.expense,
+        incomes => !e.transfer && e.type == TransactionType.income,
+      };
 }
 
 class TransactionsView extends StatefulWidget {
@@ -46,15 +49,6 @@ class _TransactionsViewState extends State<TransactionsView> {
   String search = '';
   Set<String>? selectedCategoryIDs;
   List<String> _lastFilterIDs = [];
-  List<Expense> _deleted = [];
-  Timer? _undoTimer;
-
-  @override
-  void dispose() {
-    _undoTimer?.cancel();
-    super.dispose();
-  }
-
   List<FinanceCategory> get filterCategories =>
       categories.forFilter({for (final e in expenseStore.expenses) e.categoryID});
 
@@ -78,7 +72,7 @@ class _TransactionsViewState extends State<TransactionsView> {
               e.title.toLowerCase().contains(q) ||
               cat.displayName.toLowerCase().contains(q) ||
               (e.notes?.toLowerCase().contains(q) ?? false)) &&
-          sel.contains(e.categoryID) &&
+          (e.transfer || sel.contains(e.categoryID)) &&
           typeFilter.matches(e);
     }).toList();
     switch (sort) {
@@ -96,22 +90,6 @@ class _TransactionsViewState extends State<TransactionsView> {
     return list;
   }
 
-  void _delete(Expense e) {
-    _deleted = [e];
-    expenseStore.remove(e.id);
-    _undoTimer?.cancel();
-    _undoTimer = Timer(const Duration(seconds: 3), () => setState(() => _deleted = []));
-    setState(() {});
-  }
-
-  void _undo() {
-    _undoTimer?.cancel();
-    expenseStore.expenses.addAll(_deleted);
-    expenseStore.save();
-    setState(() => _deleted = []);
-  }
-
-  void _add() => showSheet(context, const TransactionForm());
   void _edit(Expense e) => showSheet(context, TransactionForm(key: ValueKey(e.id), expense: e));
 
   @override
@@ -120,10 +98,11 @@ class _TransactionsViewState extends State<TransactionsView> {
         final items = _filtered(sel);
         final grouped = <String, List<Expense>>{};
         for (final e in items) {
-          grouped.putIfAbsent(e.categoryID, () => []).add(e);
+          grouped.putIfAbsent(e.groupID, () => []).add(e);
         }
-        final spent = items.where((e) => e.type == TransactionType.expense).fold(0.0, (s, e) => s + e.price);
-        final income = items.where((e) => e.type == TransactionType.income).fold(0.0, (s, e) => s + e.price);
+        final counted = items.where((e) => !e.transfer);
+        final spent = counted.where((e) => e.type == TransactionType.expense).fold(0.0, (s, e) => s + e.price);
+        final income = counted.where((e) => e.type == TransactionType.income).fold(0.0, (s, e) => s + e.price);
         final budget = analytics.monthlyBudgets[budgetKey(month, year)] ?? 0;
 
         return Stack(children: [
@@ -132,7 +111,6 @@ class _TransactionsViewState extends State<TransactionsView> {
             background: context.groupedBg,
             onRefresh: () => pocketBase.sync(),
             leading: _toolbarFilters(context),
-            trailing: CupertinoButton(padding: EdgeInsets.zero, onPressed: _add, child: const Icon(CupertinoIcons.add)),
             bottom: PreferredSize(
               preferredSize: const Size.fromHeight(52),
               child: Padding(
@@ -173,7 +151,6 @@ class _TransactionsViewState extends State<TransactionsView> {
               ],
             ],
           ),
-          if (_deleted.isNotEmpty) _snackbar(context),
         ]);
       });
 
@@ -267,7 +244,7 @@ class _TransactionsViewState extends State<TransactionsView> {
         Padding(
           padding: const EdgeInsets.fromLTRB(4, 6, 4, 10),
           child: Row(children: [
-            IconBadge(cat, size: 28, iconSize: 12, circle: true),
+            IconBadge(cat, size: 34, iconSize: 17, circle: true),
             gap(8),
             Expanded(child: Text(cat.displayName, style: Font.headline)),
             Text(settings.money(total),
@@ -298,50 +275,17 @@ class _TransactionsViewState extends State<TransactionsView> {
         position: RelativeRect.fromLTRB(pos.dx, pos.dy, pos.dx, pos.dy),
         items: [
           const PopupMenuItem(value: 'edit', child: Row(children: [Icon(CupertinoIcons.pencil), SizedBox(width: 8), Text('Edit')])),
-          PopupMenuItem(
-            value: 'delete',
-            child: Row(children: [
-              Icon(CupertinoIcons.trash, color: context.c(SysColor.red)),
-              gap(8),
-              Text('Delete', style: TextStyle(color: context.c(SysColor.red))),
-            ]),
-          ),
         ],
       );
       if (choice == 'edit') _edit(e);
-      if (choice == 'delete') _delete(e);
     }
 
-    Widget swipeBg(Color c, IconData icon, String label, Alignment a) => Container(
-          color: c,
-          alignment: a,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(icon, color: Colors.white),
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 12)),
-          ]),
-        );
-
-    return Dismissible(
-      key: ValueKey(e.id),
-      // Leading swipe deletes, trailing swipe edits (as on iOS).
-      background: swipeBg(context.c(SysColor.red), CupertinoIcons.trash, 'Delete', Alignment.centerLeft),
-      secondaryBackground: swipeBg(context.accent, CupertinoIcons.pencil, 'Edit', Alignment.centerRight),
-      confirmDismiss: (dir) async {
-        if (dir == DismissDirection.endToStart) {
-          _edit(e);
-          return false;
-        }
-        return true;
-      },
-      onDismissed: (_) => _delete(e),
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => _edit(e),
-        onLongPressStart: (d) => menu(d.globalPosition),
-        onSecondaryTapDown: (d) => menu(d.globalPosition),
-        child: _ExpenseRow(e),
-      ),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _edit(e),
+      onLongPressStart: (d) => menu(d.globalPosition),
+      onSecondaryTapDown: (d) => menu(d.globalPosition),
+      child: _ExpenseRow(e),
     );
   }
 
@@ -373,53 +317,11 @@ class _TransactionsViewState extends State<TransactionsView> {
             ),
           ),
         ] else ...[
-          msg('Add your first transaction for ${DateFormat.MMMM().format(DateTime(year, month))} $year'),
-          gap(28),
-          GestureDetector(
-            onTap: _add,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-              decoration: BoxDecoration(color: context.accent, borderRadius: BorderRadius.circular(10)),
-              child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(CupertinoIcons.add, color: Colors.white, size: 18),
-                SizedBox(width: 6),
-                Text('Add Transaction', style: TextStyle(color: Colors.white, fontSize: 17)),
-              ]),
-            ),
-          ),
+          msg('No transactions in ${DateFormat.MMMM().format(DateTime(year, month))} $year'),
         ],
       ]),
     );
   }
-
-  Widget _snackbar(BuildContext context) => Positioned(
-        left: 16,
-        right: 16,
-        bottom: 8 + MediaQuery.paddingOf(context).bottom,
-        child: constrained(TweenAnimationBuilder<double>(
-          tween: Tween(begin: 1, end: 0),
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-          builder: (_, t, c) => Transform.translate(offset: Offset(0, 60 * t), child: Opacity(opacity: 1 - t, child: c)),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.85),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 5, offset: const Offset(0, 2))],
-            ),
-            child: Row(children: [
-              Icon(CupertinoIcons.checkmark_circle_fill, color: context.c(SysColor.green)),
-              gap(8),
-              const Expanded(child: Text('Transaction deleted', style: TextStyle(color: Colors.white, fontSize: 17))),
-              GestureDetector(
-                onTap: _undo,
-                child: const Text('Undo', style: TextStyle(color: Colors.yellow, fontWeight: bold, fontSize: 17)),
-              ),
-            ]),
-          ),
-        )),
-      );
 }
 
 class _ExpenseRow extends StatelessWidget {
@@ -427,7 +329,7 @@ class _ExpenseRow extends StatelessWidget {
   final Expense e;
   @override
   Widget build(BuildContext context) {
-    final cat = categories.category(e.categoryID);
+    final cat = categories.category(e.groupID);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(children: [
@@ -447,12 +349,14 @@ class _ExpenseRow extends StatelessWidget {
             Text(e.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: Font.headline),
             gap(4),
             Row(children: [
-              Icon(sfIcon(cat.iconName), size: 11, color: cat.color),
+              Icon(sfIcon(cat.iconName), size: 14, color: cat.color),
               gap(6),
               Flexible(
-                child: Sec('${cat.displayName}  •  ${DateFormat('E, d MMM yyyy').format(e.date)}',
+                // The date is already in the badge on the left.
+                child: Sec('${cat.displayName}  •  ${e.account ?? DateFormat('E, d MMM yyyy').format(e.date)}',
                     style: Font.caption),
               ),
+              if (e.account != null) ...[gap(6), BankBadge(e.account!, size: 14)],
             ]),
           ]),
         ),
@@ -486,7 +390,7 @@ class _FilterSheetState extends State<_FilterSheet> {
             children: [
               for (final c in widget.categories)
                 CupertinoListTile(
-                  leading: IconBadge(c, size: 28, iconSize: 12, circle: true),
+                  leading: IconBadge(c, size: 34, iconSize: 17, circle: true),
                   title: Text(c.displayName),
                   trailing: temp.contains(c.id) ? Icon(CupertinoIcons.checkmark, color: context.accent) : null,
                   onTap: () => setState(() {
