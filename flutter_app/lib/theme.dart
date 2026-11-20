@@ -67,6 +67,8 @@ const _sfIcons = <String, IconData>{
   'book.fill': CupertinoIcons.book_fill,
   'ellipsis': CupertinoIcons.ellipsis,
   'tag.fill': CupertinoIcons.tag_fill,
+  'questionmark.circle.fill': CupertinoIcons.question_circle_fill,
+  'arrow.left.arrow.right': CupertinoIcons.arrow_right_arrow_left,
   'briefcase.fill': CupertinoIcons.briefcase_fill,
   'banknote.fill': Icons.payments,
   'creditcard.fill': CupertinoIcons.creditcard_fill,

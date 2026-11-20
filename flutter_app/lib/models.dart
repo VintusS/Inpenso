@@ -81,6 +81,15 @@ class FinanceCategory {
           type: TransactionType.income),
   ];
 
+  /// What a bank transaction has until the user picks a category (categoryID ''); kept out of analytics.
+  static FinanceCategory get uncategorized => FinanceCategory(
+      id: '', name: 'Uncategorized', iconName: 'questionmark.circle.fill', colorHex: '#8E8E93', isCustom: false);
+
+  /// Section/icon for transfers between own accounts (not a real category; kept out of analytics).
+  static const transferID = 'transfer';
+  static FinanceCategory get transfer => FinanceCategory(
+      id: transferID, name: 'Transfers', iconName: 'arrow.left.arrow.right', colorHex: '#8E8E93', isCustom: false);
+
   static FinanceCategory get fallback => builtIns.firstWhere((c) => c.id == builtInID('others')).copy();
 
   factory FinanceCategory.fromJson(Map<String, dynamic> j) => FinanceCategory(
@@ -101,13 +110,16 @@ class CategoryCatalogState {
   List<FinanceCategory> customCategories;
   Map<String, FinanceCategory> builtInOverrides;
   Set<String> hiddenCategoryIDs;
+  Set<String> deletedBuiltInIDs; // built-ins the user deleted (they are code constants, so they need a tombstone)
 
   CategoryCatalogState({
     List<String>? orderedCategoryIDs,
     List<FinanceCategory>? customCategories,
     Map<String, FinanceCategory>? builtInOverrides,
     Set<String>? hiddenCategoryIDs,
-  })  : orderedCategoryIDs = orderedCategoryIDs ?? [],
+    Set<String>? deletedBuiltInIDs,
+  })  : deletedBuiltInIDs = deletedBuiltInIDs ?? {},
+        orderedCategoryIDs = orderedCategoryIDs ?? [],
         customCategories = customCategories ?? [],
         builtInOverrides = builtInOverrides ?? {},
         hiddenCategoryIDs = hiddenCategoryIDs ?? {};
@@ -124,6 +136,7 @@ class CategoryCatalogState {
         for (final e in overrides.entries) e.key as String: FinanceCategory.fromJson(e.value),
       },
       hiddenCategoryIDs: {...?(j['hiddenCategoryIDs'] as List?)?.cast<String>()},
+      deletedBuiltInIDs: {...?(j['deletedBuiltInIDs'] as List?)?.cast<String>()},
     );
   }
 
@@ -132,6 +145,7 @@ class CategoryCatalogState {
         'customCategories': [for (final c in customCategories) c.toJson()],
         'builtInOverrides': {for (final e in builtInOverrides.entries) e.key: e.value.toJson()},
         'hiddenCategoryIDs': hiddenCategoryIDs.toList(),
+        'deletedBuiltInIDs': deletedBuiltInIDs.toList(),
       };
 }
 
@@ -155,6 +169,8 @@ class Expense {
   TransactionType type;
   String categoryID;
   String? notes;
+  String? account; // bank the row comes from (read-only, from the `accounts` relation)
+  bool transfer; // between own accounts: the sign still says in/out, but it's out of every total
 
   Expense({
     String? id,
@@ -164,7 +180,11 @@ class Expense {
     this.type = TransactionType.expense,
     required this.categoryID,
     this.notes,
+    this.account,
+    this.transfer = false,
   }) : id = id ?? newUUID();
+
+  String get groupID => transfer ? FinanceCategory.transferID : categoryID;
 
   /// Decodes the iOS export format; throws on missing required fields like Swift's Decodable.
   factory Expense.fromJson(Map<String, dynamic> j) {
@@ -177,8 +197,10 @@ class Expense {
       date: DateTime.fromMillisecondsSinceEpoch(
           (((j['date'] as num).toDouble() + _appleEpochOffset) * 1000).round()),
       type: j['type'] == 'income' ? TransactionType.income : TransactionType.expense,
-      categoryID: (categoryID == null || categoryID.isEmpty) ? builtInID(category) : categoryID,
+      categoryID: categoryID ?? builtInID(category), // '' = uncategorized
       notes: j['notes'] as String?,
+      account: j['account'] as String?,
+      transfer: j['transfer'] as bool? ?? false,
     );
   }
 
@@ -191,5 +213,7 @@ class Expense {
         'type': type.name,
         'categoryID': categoryID,
         if (notes != null) 'notes': notes,
+        if (account != null) 'account': account,
+        if (transfer) 'transfer': true,
       };
 }

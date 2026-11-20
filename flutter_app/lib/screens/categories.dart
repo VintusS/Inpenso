@@ -149,7 +149,7 @@ class _Tile extends StatelessWidget {
             ),
             child: Column(children: [
               Stack(clipBehavior: Clip.none, children: [
-                IconBadge(category, size: 56, iconSize: 22, circle: true),
+                IconBadge(category, size: 56, iconSize: 28, circle: true),
                 Positioned(
                   right: -16,
                   top: -16,
@@ -212,7 +212,7 @@ class _DragPreview extends StatelessWidget {
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(color: context.bg, borderRadius: BorderRadius.circular(8)),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          IconBadge(c, size: 52, iconSize: 20, circle: true),
+          IconBadge(c, size: 52, iconSize: 26, circle: true),
           gap(6),
           Text(c.displayName, style: Font.caption.copyWith(fontWeight: semibold, color: context.label)),
         ]),
@@ -250,6 +250,28 @@ class _CategoryEditorState extends State<CategoryEditor> {
       categories.add(n, icon, color, type);
     }
     Navigator.pop(context);
+  }
+
+  void _confirmDelete() {
+    final n = categories.usage(c!.id);
+    showAlert(context, 'Delete "${c!.displayName}"?',
+        message: n == 0 ? 'This cannot be undone.' : '$n transactions will become uncategorized.',
+        actions: [
+          CupertinoDialogAction(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(context); // dialog
+              if (categories.delete(c!)) {
+                settings.normalizeDefaultCategory();
+                Navigator.pop(context); // editor
+              } else {
+                showAlert(context, 'Keep at least one category', message: 'Add another category of this type first.');
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ]);
   }
 
   void _act(VoidCallback f) {
@@ -300,7 +322,7 @@ class _CategoryEditorState extends State<CategoryEditor> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(color: icon == i ? context.accent : context.bg3, shape: BoxShape.circle),
-                    child: Icon(sfIcon(i), size: 20, color: icon == i ? Colors.white : context.label),
+                    child: Icon(sfIcon(i), size: 24, color: icon == i ? Colors.white : context.label),
                   ),
                 ),
             ]),
@@ -335,6 +357,11 @@ class _CategoryEditorState extends State<CategoryEditor> {
                         settings.normalizeDefaultCategory();
                       }),
                     ),
+              CupertinoListTile(
+                leading: Icon(CupertinoIcons.trash, color: red),
+                title: Text('Delete Category', style: TextStyle(color: red)),
+                onTap: _confirmDelete,
+              ),
               if (!c!.isCustom && categories.hasOverride(c!.id))
                 CupertinoListTile(
                   leading: Icon(CupertinoIcons.arrow_counterclockwise, color: red),

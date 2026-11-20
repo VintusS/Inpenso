@@ -45,7 +45,7 @@ class Storage {
       _prefs.setString(_custom, jsonEncode([for (final x in c) x.toJson()]));
 
   static CategoryCatalogState? loadCatalog() => _read(_catalog, (d) => CategoryCatalogState.fromJson(d));
-  static void saveCatalog(CategoryCatalogState s) => put(_catalog, jsonEncode(s.toJson()));
+  static void saveCatalog(CategoryCatalogState s) => _prefs.setString(_catalog, jsonEncode(s.toJson()));
 
   /// Writes a synced preference locally and to PocketBase (when connected).
   static void put(String key, String value) {
@@ -160,8 +160,50 @@ class CategoryStore extends ChangeNotifier {
 
   static final _builtInIDs = {for (final c in FinanceCategory.builtIns) c.id};
 
+  /// One PocketBase `categories` row per category, built-ins included (key = Inpenso id).
+  Map<String, Map<String, dynamic>> get rows {
+    final m = _map;
+    var i = 0;
+    return {
+      for (final id in _state.orderedCategoryIDs)
+        if (m[id] != null) id: categoryRow(m[id]!, i++, _state.hiddenCategoryIDs.contains(id)),
+    };
+  }
+
+  /// Replaces the catalog with the server's `categories` rows (no push back).
+  void replaceFromRows(List<RecordModel> rows) {
+    int order(RecordModel r) => r.getStringValue('key').isEmpty ? 1 << 30 : r.getIntValue('sortOrder'); // new ones last
+    final sorted = [...rows]..sort((a, b) => order(a).compareTo(order(b)));
+    // A built-in with no row was deleted.
+    final s = CategoryCatalogState(deletedBuiltInIDs: _builtInIDs.difference({for (final r in rows) categoryKey(r)}));
+    for (final r in sorted) {
+      final key = categoryKey(r), icon = r.getStringValue('icon');
+      final c = FinanceCategory(
+          id: key,
+          name: r.getStringValue('name'),
+          iconName: icon.isEmpty ? 'tag.fill' : icon,
+          colorHex: '#${(r.getIntValue('color') & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}',
+          isCustom: !_builtInIDs.contains(key),
+          type: r.getStringValue('type') == 'income' ? TransactionType.income : TransactionType.expense);
+      s.orderedCategoryIDs.add(key);
+      if (r.getBoolValue('hidden')) s.hiddenCategoryIDs.add(key);
+      if (c.isCustom) {
+        s.customCategories.add(c);
+      } else {
+        final d = FinanceCategory.builtIns.firstWhere((x) => x.id == key);
+        // Only an edited built-in is an override (keeps "reset to default" meaningful).
+        if (c.name != d.name || c.iconName != d.iconName || c.colorHex != d.colorHex.toUpperCase()) {
+          s.builtInOverrides[key] = c;
+        }
+      }
+    }
+    _state = _normalized(s);
+    _save(push: false);
+  }
+
   Map<String, FinanceCategory> get _map => {
-        for (final c in FinanceCategory.builtIns) c.id: _state.builtInOverrides[c.id] ?? c,
+        for (final c in FinanceCategory.builtIns)
+          if (!_state.deletedBuiltInIDs.contains(c.id)) c.id: _state.builtInOverrides[c.id] ?? c,
         for (final c in _state.customCategories) c.id: c,
       };
 
@@ -178,7 +220,12 @@ class CategoryStore extends ChangeNotifier {
   List<FinanceCategory> get hidden =>
       _ordered(true).where((c) => _state.hiddenCategoryIDs.contains(c.id)).toList();
 
-  FinanceCategory category(String id) => _map[id] ?? FinanceCategory.fallback;
+  FinanceCategory category(String id) =>
+      id.isEmpty
+          ? FinanceCategory.uncategorized
+          : id == FinanceCategory.transferID
+              ? FinanceCategory.transfer
+              : _map[id] ?? FinanceCategory.fallback;
 
   List<FinanceCategory> forPicker(String? including, TransactionType type) {
     final list = visibleFor(type);
@@ -191,7 +238,11 @@ class CategoryStore extends ChangeNotifier {
     final v = visible;
     final extra = usedIDs.difference({for (final c in v) c.id});
     final m = _map;
-    return [...v, for (final id in orderedIDs(extra)) if (m[id] != null) m[id]!];
+    return [
+      ...v,
+      for (final id in orderedIDs(extra)) if (m[id] != null) m[id]!,
+      if (usedIDs.contains('')) FinanceCategory.uncategorized,
+    ];
   }
 
   List<String> orderedIDs(Set<String> ids) {
@@ -237,6 +288,30 @@ class CategoryStore extends ChangeNotifier {
     _save();
   }
 
+  /// Deletes the category; its transactions become uncategorized. Returns false for the last visible one of its type.
+  bool delete(FinanceCategory c) {
+    if (_map[c.id] == null) return false;
+    if (!isHidden(c.id) && visibleFor(c.type).length <= 1) return false;
+    if (c.isCustom) {
+      _state.customCategories.removeWhere((x) => x.id == c.id);
+    } else {
+      _state.deletedBuiltInIDs.add(c.id);
+      _state.builtInOverrides.remove(c.id);
+    }
+    _save();
+    var changed = false;
+    for (final e in expenseStore.expenses) {
+      if (e.categoryID == c.id) {
+        e.categoryID = '';
+        changed = true;
+      }
+    }
+    if (changed) expenseStore.save();
+    return true;
+  }
+
+  int usage(String id) => expenseStore.expenses.where((e) => e.categoryID == id).length;
+
   void restore(FinanceCategory c) {
     if (_map[c.id] == null) return;
     _state.hiddenCategoryIDs.remove(c.id);
@@ -261,10 +336,11 @@ class CategoryStore extends ChangeNotifier {
   bool isHidden(String id) => _state.hiddenCategoryIDs.contains(id);
   bool hasOverride(String id) => _state.builtInOverrides.containsKey(id);
 
-  void _save() {
+  void _save({bool push = true}) {
     _state = _normalized(_state);
     Storage.saveCatalog(_state);
     Storage.saveCustomCategories(_state.customCategories);
+    if (push) _remote?.pushCategories();
     notifyListeners();
   }
 
@@ -281,7 +357,12 @@ class CategoryStore extends ChangeNotifier {
             ..id = e.key
             ..isCustom = false,
     };
-    final known = [for (final c in FinanceCategory.builtIns) c.id, for (final c in custom) c.id];
+    final deleted = s.deletedBuiltInIDs.intersection(_builtInIDs);
+    final known = [
+      for (final c in FinanceCategory.builtIns)
+        if (!deleted.contains(c.id)) c.id,
+      for (final c in custom) c.id,
+    ];
     final knownSet = known.toSet();
     final ordered = <String>[];
     for (final id in s.orderedCategoryIDs) {
@@ -293,8 +374,9 @@ class CategoryStore extends ChangeNotifier {
     return CategoryCatalogState(
       orderedCategoryIDs: ordered,
       customCategories: custom,
-      builtInOverrides: overrides,
+      builtInOverrides: {for (final e in overrides.entries) if (!deleted.contains(e.key)) e.key: e.value},
       hiddenCategoryIDs: s.hiddenCategoryIDs.intersection(knownSet),
+      deletedBuiltInIDs: deleted,
     );
   }
 }
@@ -304,11 +386,6 @@ class ExpenseStore extends ChangeNotifier {
 
   void add(Expense e) {
     expenses.add(e);
-    save();
-  }
-
-  void remove(String id) {
-    expenses.removeWhere((e) => e.id == id);
     save();
   }
 
@@ -332,7 +409,8 @@ class ExpenseStore extends ChangeNotifier {
 PocketBaseStore? _remote;
 
 /// Preferences that live on the server (key = SharedPreferences key).
-const syncedPrefs = ['categoryCatalogState', 'budgets', 'selectedCurrency', 'defaultCategoryID', 'selectedTheme'];
+/// Categories are not here: they are rows of the `categories` collection.
+const syncedPrefs = ['budgets', 'selectedCurrency', 'defaultCategoryID', 'selectedTheme'];
 
 final _pbId = RegExp(r'^[a-z0-9]{15}$');
 
@@ -359,10 +437,26 @@ Expense? expenseFromPb(RecordModel r) {
     price: cents.abs() / 100,
     date: DateTime(d.year, d.month, d.day, d.hour, d.minute, d.second),
     type: type,
-    categoryID: cat.isNotEmpty ? cat : categories.preferredCategoryID(null, type),
-    notes: notes.isNotEmpty ? notes : (bank.isEmpty ? null : bank),
+    categoryID: cat, // '' = uncategorized until the user picks one
+    notes: notes.isNotEmpty ? notes : null,
+    account: bank.isEmpty ? null : bank,
+    transfer: r.getBoolValue('transfer'),
   );
 }
+
+/// A row added outside the app (e.g. the Notion import) has no key yet: its record id becomes it.
+String categoryKey(RecordModel r) => r.getStringValue('key').isEmpty ? r.id : r.getStringValue('key');
+
+/// FinanceCategory -> `categories` row (color as a 0xRRGGBB number, like the finance-tracker rows).
+Map<String, dynamic> categoryRow(FinanceCategory c, int sortOrder, bool hidden) => {
+      'key': c.id,
+      'name': c.name,
+      'icon': c.iconName,
+      'color': c.color.toARGB32() & 0xFFFFFF,
+      'type': c.type.name,
+      'sortOrder': sortOrder,
+      'hidden': hidden,
+    };
 
 /// Expense -> the `transactions` fields Inpenso owns (bank fields like description are never touched).
 Map<String, dynamic> pbBody(Expense e) => {
@@ -372,6 +466,7 @@ Map<String, dynamic> pbBody(Expense e) => {
           DateTime.utc(e.date.year, e.date.month, e.date.day, e.date.hour, e.date.minute, e.date.second).toIso8601String(),
       'categoryID': e.categoryID,
       'notes': e.notes ?? '',
+      'transfer': e.transfer,
     };
 
 class PocketBaseStore extends ChangeNotifier {
@@ -380,6 +475,7 @@ class PocketBaseStore extends ChangeNotifier {
   bool syncing = false;
   final _pushed = <String, String>{}; // transaction id -> jsonEncode(pbBody) last known on the server
   final _prefIds = <String, String>{}; // pref key -> record id
+  final _catPushed = <String, (String, String)>{}; // category key -> (record id, jsonEncode(row) on the server)
   Future<void> _queue = Future.value();
 
   PocketBaseStore() {
@@ -411,6 +507,7 @@ class PocketBaseStore extends ChangeNotifier {
     pb.authStore.clear();
     _pushed.clear();
     _prefIds.clear();
+    _catPushed.clear();
     expenseStore.replaceAll([]); // the data lives on the server
     notifyListeners();
   }
@@ -444,8 +541,18 @@ class PocketBaseStore extends ChangeNotifier {
     await pb.collection('users').authRefresh(); // keeps the token alive while the app is used
     final server = {for (final r in await pb.collection('prefs').getFullList()) r.getStringValue('key'): r};
     final rows = await pb.collection('transactions').getFullList(expand: 'account');
-    final remap = server.containsKey('categoryCatalogState') ? <String, String>{} : _adoptLegacyCategories(
-        await pb.collection('categories').getFullList(), rows);
+    final catRows = await pb.collection('categories').getFullList();
+    // Rows without a key are old finance-tracker categories: the catalog has not been moved here yet.
+    final migrated = catRows.any((r) => r.getStringValue('key').isNotEmpty);
+    _catPushed
+      ..clear()
+      ..addAll({
+        for (final r in catRows)
+          if (migrated)
+            categoryKey(r): (r.id, jsonEncode(_rowOf(r)))
+          else
+            r.id: (r.id, '') // adopted ones keep their id as key and get rewritten, the rest are deleted
+      });
 
     _prefIds
       ..clear()
@@ -458,8 +565,18 @@ class PocketBaseStore extends ChangeNotifier {
         _prefIds[k] = (await pb.collection('prefs').create(body: {'key': k, 'value': local})).id;
       }
     }
+    var remap = <String, String>{};
+    if (migrated) {
+      categories.replaceFromRows(catRows);
+    } else if (server['categoryCatalogState'] != null) {
+      // Catalog from the old `prefs` blob.
+      await _prefs.setString('categoryCatalogState', server['categoryCatalogState']!.getStringValue('value'));
+      categories.reload();
+    } else {
+      remap = _adoptLegacyCategories(catRows, rows);
+    }
+    await _pushCategories(); // no-op unless migrating or a row lacks its key
     settings.reload();
-    categories.reload();
     analytics.reloadBudgets();
 
     final remote = [for (final r in rows) ?expenseFromPb(r)];
@@ -516,6 +633,36 @@ class PocketBaseStore extends ChangeNotifier {
         _prefIds[key] = (await pb.collection('prefs').create(body: {'key': key, 'value': value})).id;
       }
     });
+  }
+
+  static Map<String, dynamic> _rowOf(RecordModel r) => {
+        'key': r.getStringValue('key'),
+        'name': r.getStringValue('name'),
+        'icon': r.getStringValue('icon'),
+        'color': r.getIntValue('color'),
+        'type': r.getStringValue('type'),
+        'sortOrder': r.getIntValue('sortOrder'),
+        'hidden': r.getBoolValue('hidden'),
+      };
+
+  void pushCategories() {
+    if (connected) _enqueue(_pushCategories);
+  }
+
+  /// Same diff as transactions: creates, updates and deletes the rows that changed.
+  Future<void> _pushCategories() async {
+    final col = pb.collection('categories'), rows = categories.rows;
+    for (final MapEntry(key: k, value: body) in rows.entries) {
+      final fp = jsonEncode(body), old = _catPushed[k];
+      if (old?.$2 == fp) continue;
+      final id = old == null ? (await col.create(body: body)).id : (await col.update(old.$1, body: body)).id;
+      _catPushed[k] = (id, fp);
+    }
+    for (final k in [..._catPushed.keys]) {
+      if (rows.containsKey(k)) continue;
+      await col.delete(_catPushed[k]!.$1);
+      _catPushed.remove(k);
+    }
   }
 
   void pushExpenses() {
@@ -619,7 +766,8 @@ class AnalyticsStore extends ChangeNotifier {
     calculate();
   }
 
-  List<Expense> get _all => expenseStore.expenses;
+  /// Uncategorized rows are left out of every figure until they get a category.
+  List<Expense> get _all => [for (final e in expenseStore.expenses) if (e.categoryID.isNotEmpty && !e.transfer) e];
 
   Map<String, double> _totals(Iterable<Expense> list) {
     final t = <String, double>{};
