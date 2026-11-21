@@ -587,13 +587,31 @@ class PocketBaseStore extends ChangeNotifier {
     for (final e in remote) {
       e.categoryID = remap[e.categoryID] ?? e.categoryID;
     }
+    // A category named "Trasferimenti"/"Transfers" (e.g. from the Notion import) means the transfer flag:
+    // its rows become real transfers (out of analytics) and the category is hidden from the pickers.
+    final transferCats = [
+      for (final c in [...categories.visible, ...categories.hidden])
+        if (const {'trasferimenti', 'transfers'}.contains(c.name.trim().toLowerCase())) c
+    ];
+    final transferIDs = {for (final c in transferCats) c.id};
+    var converted = false;
+    for (final e in remote) {
+      if (!transferIDs.contains(e.categoryID)) continue;
+      e
+        ..transfer = true
+        ..categoryID = '';
+      converted = true;
+    }
+    for (final c in transferCats) {
+      categories.hide(c);
+    }
     // Added before connecting (not a PocketBase id; 'pb-' rows are the old read-only bank cache).
     final localOnly = [
       for (final e in expenseStore.expenses)
         if (!_pbId.hasMatch(e.id) && !e.id.startsWith('pb-')) e
     ];
     expenseStore.replaceAll([...remote, ...localOnly]);
-    if (remap.isNotEmpty || localOnly.isNotEmpty) await _pushExpenses();
+    if (remap.isNotEmpty || localOnly.isNotEmpty || converted) await _pushExpenses();
   }
 
   /// First connect: the old finance-tracker categories become Inpenso categories (same id, so rows keep
