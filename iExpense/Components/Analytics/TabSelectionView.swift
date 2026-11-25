@@ -15,6 +15,15 @@ enum AnalyticsTab: String, CaseIterable, Identifiable {
     case budget = "Budget"
     
     var id: Self { self }
+
+    var displayName: String {
+        switch self {
+        case .overview: return String(localized: "Overview")
+        case .trends: return String(localized: "Trends")
+        case .insights: return String(localized: "Insights")
+        case .budget: return String(localized: "Budget")
+        }
+    }
 }
 
 /// Reusable tab selector for analytics view
@@ -24,7 +33,7 @@ struct AnalyticsTabSelector: View {
     var body: some View {
         Picker("Select a tab", selection: $selectedTab) {
             ForEach(AnalyticsTab.allCases) { tab in
-                Text(tab.rawValue)
+                Text(tab.displayName)
                     .tag(tab)
             }
         }

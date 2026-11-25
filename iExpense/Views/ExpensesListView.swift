@@ -35,6 +35,16 @@ struct ExpensesListView: View {
         case titleAscending = "Title A-Z"
 
         var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .dateDescending: return String(localized: "Newest First")
+            case .dateAscending: return String(localized: "Oldest First")
+            case .amountDescending: return String(localized: "Highest Amount")
+            case .amountAscending: return String(localized: "Lowest Amount")
+            case .titleAscending: return String(localized: "Title A-Z")
+            }
+        }
     }
 
     enum TransactionFilter: String, CaseIterable, Identifiable {
@@ -43,6 +53,14 @@ struct ExpensesListView: View {
         case incomes = "Incomes"
 
         var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .all: return String(localized: "All")
+            case .expenses: return String(localized: "Expenses")
+            case .incomes: return String(localized: "Incomes")
+            }
+        }
 
         func matches(_ transaction: Expense) -> Bool {
             switch self {
@@ -259,7 +277,7 @@ struct ExpensesListView: View {
             Menu {
                 Picker("Sort by", selection: $selectedSortOption) {
                     ForEach(SortOption.allCases) { option in
-                        Text(option.rawValue).tag(option)
+                        Text(option.displayName).tag(option)
                     }
                 }
             } label: {
@@ -269,7 +287,7 @@ struct ExpensesListView: View {
             Menu {
                 Picker("Type", selection: $selectedTransactionFilter) {
                     ForEach(TransactionFilter.allCases) { filter in
-                        Text(filter.rawValue).tag(filter)
+                        Text(filter.displayName).tag(filter)
                     }
                 }
             } label: {
@@ -325,7 +343,7 @@ struct ExpensesListView: View {
         )
     }
 
-    private func summaryMetric(title: String, amount: Double, color: Color) -> some View {
+    private func summaryMetric(title: LocalizedStringKey, amount: Double, color: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.subheadline)

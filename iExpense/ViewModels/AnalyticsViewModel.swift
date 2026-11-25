@@ -288,24 +288,24 @@ class AnalyticsViewModel: ObservableObject {
             if percentOfBudgetUsed >= 90 {
                 newInsights.append(SpendingInsight(
                     type: .negative,
-                    title: "Budget Alert",
-                    description: "You've used \(Int(percentOfBudgetUsed))% of your monthly budget.",
+                    title: String(localized: "Budget Alert"),
+                    description: String(localized: "You've used \(Int(percentOfBudgetUsed))% of your monthly budget."),
                     icon: "exclamationmark.triangle",
                     color: .red
                 ))
             } else if percentOfBudgetUsed >= 75 {
                 newInsights.append(SpendingInsight(
                     type: .neutral,
-                    title: "Budget Notice",
-                    description: "You've used \(Int(percentOfBudgetUsed))% of your monthly budget.",
+                    title: String(localized: "Budget Notice"),
+                    description: String(localized: "You've used \(Int(percentOfBudgetUsed))% of your monthly budget."),
                     icon: "bell",
                     color: .orange
                 ))
             } else if daysRemainingInMonth < 7 && percentOfBudgetUsed < 60 {
                 newInsights.append(SpendingInsight(
                     type: .positive,
-                    title: "Under Budget",
-                    description: "Great job! You're under budget this month.",
+                    title: String(localized: "Under Budget"),
+                    description: String(localized: "Great job! You're under budget this month."),
                     icon: "checkmark.circle",
                     color: .green
                 ))
@@ -315,8 +315,8 @@ class AnalyticsViewModel: ObservableObject {
         if let fastestGrowing = fastestGrowingCategory, fastestGrowing.1 > 30 {
             newInsights.append(SpendingInsight(
                 type: .negative,
-                title: "Spending Increase",
-                description: "\(categoryName(for: fastestGrowing.0)) spending increased by \(Int(fastestGrowing.1))% from last month.",
+                title: String(localized: "Spending Increase"),
+                description: String(localized: "\(categoryName(for: fastestGrowing.0)) spending increased by \(Int(fastestGrowing.1))% from last month."),
                 icon: "arrow.up.right",
                 color: .red
             ))
@@ -331,8 +331,8 @@ class AnalyticsViewModel: ObservableObject {
         if let bestReduction = reducedCategories.min(by: { $0.percentChange < $1.percentChange }) {
             newInsights.append(SpendingInsight(
                 type: .positive,
-                title: "Spending Decrease",
-                description: "You reduced \(categoryName(for: bestReduction.categoryID)) spending by \(Int(abs(bestReduction.percentChange)))%.",
+                title: String(localized: "Spending Decrease"),
+                description: String(localized: "You reduced \(categoryName(for: bestReduction.categoryID)) spending by \(Int(abs(bestReduction.percentChange)))%."),
                 icon: "arrow.down.right",
                 color: .green
             ))
@@ -347,8 +347,8 @@ class AnalyticsViewModel: ObservableObject {
 
             newInsights.append(SpendingInsight(
                 type: .negative,
-                title: "Projected Overspending",
-                description: "At this rate, you might exceed your budget by \(formattedOverage).",
+                title: String(localized: "Projected Overspending"),
+                description: String(localized: "At this rate, you might exceed your budget by \(formattedOverage)."),
                 icon: "chart.line.uptrend.xyaxis",
                 color: .red
             ))

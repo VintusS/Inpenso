@@ -35,6 +35,12 @@ struct MainTabView: View {
                     }
                     .tag(2)
 
+                AccountsView(expenseViewModel: viewModel)
+                    .tabItem {
+                        Label("Accounts", systemImage: "creditcard.fill")
+                    }
+                    .tag(4)
+
                 SettingsView()
                     .tabItem {
                         Label("Settings", systemImage: "gearshape.fill")

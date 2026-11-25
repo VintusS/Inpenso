@@ -21,6 +21,8 @@ struct EditExpenseView: View {
     @State private var transactionType: TransactionType
     @State private var showDatePicker: Bool = false
     @State private var notes: String = ""
+    @State private var selectedAccountID: String = ""
+    @State private var accounts: [Account] = []
     @State private var keyboardVisible: Bool = false
     @State private var viewID = UUID()
     let expense: Expense
@@ -34,6 +36,7 @@ struct EditExpenseView: View {
         _selectedCategoryID = State(initialValue: expense.categoryID)
         _transactionType = State(initialValue: expense.type)
         _notes = State(initialValue: expense.notes ?? "")
+        _selectedAccountID = State(initialValue: expense.accountID ?? "")
     }
 
     // Current currency symbol
@@ -73,6 +76,12 @@ struct EditExpenseView: View {
                                     label: "Amount",
                                     amount: $price,
                                     currencySymbol: currencySymbol
+                                )
+                                .padding(.horizontal)
+
+                                AccountSelectorField(
+                                    selectedAccountID: $selectedAccountID,
+                                    accounts: $accounts
                                 )
                                 .padding(.horizontal)
                                 .padding(.bottom, 8)
@@ -196,6 +205,7 @@ struct EditExpenseView: View {
             }
             .onAppear {
                 viewID = UUID()
+                accounts = AccountStorage.load()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
                 withAnimation {
@@ -227,6 +237,7 @@ struct EditExpenseView: View {
             viewModel.expenses[index].category = Category.category(from: selectedCategory.id) ?? .others
             let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
             viewModel.expenses[index].notes = trimmedNotes.isEmpty ? nil : trimmedNotes
+            viewModel.expenses[index].accountID = selectedAccountID.isEmpty ? nil : selectedAccountID
             viewModel.saveExpenses()
         }
     }

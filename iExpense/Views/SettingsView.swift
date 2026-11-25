@@ -102,7 +102,7 @@ struct SettingsView: View {
     }
     
     private func currencyRow(for currency: (code: String, symbol: String, name: String)) -> some View {
-        Text("\(currency.symbol) \(currency.name) (\(currency.code))")
+        Text("\(currency.symbol) \(NSLocalizedString(currency.name, comment: "Currency name")) (\(currency.code))")
             .tag(currency.code)
     }
     

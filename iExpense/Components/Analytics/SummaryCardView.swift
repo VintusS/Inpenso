@@ -19,7 +19,7 @@ enum SummaryValueFormat {
 
 /// A card that displays a summary value with a title and icon
 struct SummaryCard: View {
-    let title: String
+    let title: LocalizedStringKey
     let value: Double
     let valueFormat: SummaryValueFormat
     let icon: String
@@ -27,7 +27,7 @@ struct SummaryCard: View {
     var currencyCode: String
     
     init(
-        title: String, 
+        title: LocalizedStringKey, 
         value: Double, 
         valueFormat: SummaryValueFormat, 
         icon: String, 

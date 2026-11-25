@@ -16,9 +16,9 @@ enum AppTheme: String, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
-        case .light: return "Light"
-        case .dark: return "Dark"
-        case .system: return "System"
+        case .light: return String(localized: "Light")
+        case .dark: return String(localized: "Dark")
+        case .system: return String(localized: "System")
         }
     }
     
@@ -34,6 +34,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
 // Available currencies with symbols - making this global to avoid actor isolation issues
 let availableCurrencies: [(code: String, symbol: String, name: String)] = [
     ("USD", "$", "US Dollar"),
+    ("MXN", "$", "Mexican Peso"),
     ("EUR", "€", "Euro"),
     ("MDL", "L", "Moldovan Leu"),
     ("GBP", "£", "British Pound"),

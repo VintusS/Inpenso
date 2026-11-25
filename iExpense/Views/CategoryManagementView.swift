@@ -46,7 +46,7 @@ struct CategoryManagementView: View {
         }
     }
 
-    private func categorySection(title: String, categories: [FinanceCategory], isHiddenSection: Bool) -> some View {
+    private func categorySection(title: LocalizedStringKey, categories: [FinanceCategory], isHiddenSection: Bool) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title)
                 .font(.headline)
