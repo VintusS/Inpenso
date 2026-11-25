@@ -9,13 +9,13 @@ import SwiftUI
 
 /// A standard card view with consistent styling
 struct CardView<Content: View>: View {
-    let title: String
+    let title: LocalizedStringKey
     let content: Content
     var titleAlignment: HorizontalAlignment = .leading
     var showDivider: Bool = false
     
     init(
-        title: String,
+        title: LocalizedStringKey,
         titleAlignment: HorizontalAlignment = .leading,
         showDivider: Bool = false,
         @ViewBuilder content: () -> Content
@@ -51,7 +51,7 @@ struct CardView<Content: View>: View {
 
 /// A standard section header text
 struct SectionHeaderText: View {
-    let text: String
+    let text: LocalizedStringKey
     
     var body: some View {
         Text(text)

@@ -23,7 +23,8 @@ class ExpenseViewModel: ObservableObject {
         category: Category,
         type: TransactionType = .expense,
         categoryID: String? = nil,
-        notes: String? = nil
+        notes: String? = nil,
+        accountID: String? = nil
     ) -> Expense {
         let newExpense = Expense(
             title: title,
@@ -32,7 +33,8 @@ class ExpenseViewModel: ObservableObject {
             category: category,
             type: type,
             categoryID: categoryID,
-            notes: notes
+            notes: notes,
+            accountID: accountID
         )
         expenses.append(newExpense)
         saveExpenses()

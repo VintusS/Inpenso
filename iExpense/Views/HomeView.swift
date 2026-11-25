@@ -19,6 +19,7 @@ struct HomeView: View {
     @State private var animateCards = false
     @State private var selectedExpenseToEdit: Expense? = nil
     @State private var showingEditExpense = false
+    @State private var showingAssistant = false
     
     private let recentDaysToShow = 7
 
@@ -63,6 +64,14 @@ struct HomeView: View {
             .sheet(item: $selectedExpenseToEdit) { expense in
                 EditExpenseView(viewModel: viewModel, expense: expense)
             }
+            .sheet(isPresented: $showingAssistant) {
+                if #available(iOS 26.0, *) {
+                    AssistantView(viewModel: viewModel)
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                assistantButton
+            }
             .onAppear {
                 // Animate cards when view appears with slight delay between each
                 withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
@@ -72,6 +81,34 @@ struct HomeView: View {
         }
     }
     
+    // MARK: - Floating Assistant Button
+
+    @ViewBuilder
+    private var assistantButton: some View {
+        if #available(iOS 26.0, *) {
+            Button {
+                showingAssistant = true
+            } label: {
+                Image(systemName: "sparkles")
+                    .font(.title3.bold())
+                    .foregroundColor(.white)
+                    .frame(width: 56, height: 56)
+                    .background(
+                        LinearGradient(
+                            colors: [.purple, .blue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        in: Circle()
+                    )
+                    .shadow(color: .purple.opacity(0.35), radius: 8, y: 4)
+            }
+            .padding(.trailing, 20)
+            .padding(.bottom, 16)
+            .accessibilityLabel(String(localized: "Assistant"))
+        }
+    }
+
     // MARK: - Header Card
     
     private var headerCard: some View {
@@ -443,7 +480,7 @@ struct HomeView: View {
     
     // MARK: - Helper Methods
     
-    private func cashflowMetric(title: String, amount: Double, color: Color) -> some View {
+    private func cashflowMetric(title: LocalizedStringKey, amount: Double, color: Color) -> some View {
         VStack(spacing: 4) {
             Text(title)
                 .font(.caption)

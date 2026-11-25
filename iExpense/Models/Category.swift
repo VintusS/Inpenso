@@ -18,9 +18,9 @@ enum TransactionType: String, CaseIterable, Codable, Identifiable {
     var displayName: String {
         switch self {
         case .expense:
-            return "Expense"
+            return String(localized: "Expense")
         case .income:
-            return "Income"
+            return String(localized: "Income")
         }
     }
 
@@ -49,17 +49,17 @@ enum Category: String, CaseIterable, Codable, AppEnum {
 
     var displayName: String {
         switch self {
-        case .food: return "Food"
-        case .eatingOut: return "Eating Out"
-        case .rent: return "Rent"
-        case .shopping: return "Shopping"
-        case .entertainment: return "Entertainment"
-        case .transportation: return "Transportation"
-        case .utilities: return "Utilities"
-        case .subscriptions: return "Subscriptions"
-        case .healthcare: return "Healthcare"
-        case .education: return "Education"
-        case .others: return "Others"
+        case .food: return String(localized: "Food")
+        case .eatingOut: return String(localized: "Eating Out")
+        case .rent: return String(localized: "Rent")
+        case .shopping: return String(localized: "Shopping")
+        case .entertainment: return String(localized: "Entertainment")
+        case .transportation: return String(localized: "Transportation")
+        case .utilities: return String(localized: "Utilities")
+        case .subscriptions: return String(localized: "Subscriptions")
+        case .healthcare: return String(localized: "Healthcare")
+        case .education: return String(localized: "Education")
+        case .others: return String(localized: "Others")
         }
     }
 

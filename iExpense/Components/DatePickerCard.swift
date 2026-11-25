@@ -9,7 +9,7 @@ import SwiftUI
 
 /// An expandable date picker with toggle functionality
 struct DatePickerCard: View {
-    let title: String
+    let title: LocalizedStringKey
     @Binding var selectedDate: Date
     @Binding var isExpanded: Bool
     var maxDate: Date = Date()

@@ -302,29 +302,29 @@ struct AnalyticsView: View {
         
         if ratio > 1.5 {
             return SpendingPatternView.PatternAnalysis(
-                title: "Weekend Spender",
-                description: "You spend \(Int(ratio * 100))% more on weekends compared to weekdays",
+                title: String(localized: "Weekend Spender"),
+                description: String(localized: "You spend \(Int(ratio * 100))% more on weekends compared to weekdays"),
                 icon: "party.popper",
                 color: .orange
             )
         } else if ratio > 1.1 {
             return SpendingPatternView.PatternAnalysis(
-                title: "Slightly Higher Weekend Spending",
-                description: "Your weekend spending is moderately higher than weekdays",
+                title: String(localized: "Slightly Higher Weekend Spending"),
+                description: String(localized: "Your weekend spending is moderately higher than weekdays"),
                 icon: "calendar.badge.plus",
                 color: .blue
             )
         } else if ratio < 0.7 {
             return SpendingPatternView.PatternAnalysis(
-                title: "Weekday Focused",
-                description: "You spend significantly more on weekdays than weekends",
+                title: String(localized: "Weekday Focused"),
+                description: String(localized: "You spend significantly more on weekdays than weekends"),
                 icon: "briefcase",
                 color: .purple
             )
         } else {
             return SpendingPatternView.PatternAnalysis(
-                title: "Balanced Spending",
-                description: "Your spending is fairly consistent throughout the week",
+                title: String(localized: "Balanced Spending"),
+                description: String(localized: "Your spending is fairly consistent throughout the week"),
                 icon: "equal.circle",
                 color: .green
             )
@@ -362,29 +362,29 @@ struct AnalyticsView: View {
         
         if maxAvg == earlyAvg && earlyAvg > midAvg * 1.3 && earlyAvg > lateAvg * 1.3 {
             return SpendingPatternView.PatternAnalysis(
-                title: "Early Month Spender",
-                description: "You tend to spend more in the first part of the month",
+                title: String(localized: "Early Month Spender"),
+                description: String(localized: "You tend to spend more in the first part of the month"),
                 icon: "calendar.badge.plus",
                 color: .green
             )
         } else if maxAvg == lateAvg && lateAvg > earlyAvg * 1.3 && lateAvg > midAvg * 1.3 {
             return SpendingPatternView.PatternAnalysis(
-                title: "End of Month Spender",
-                description: "Your spending increases toward the end of the month",
+                title: String(localized: "End of Month Spender"),
+                description: String(localized: "Your spending increases toward the end of the month"),
                 icon: "calendar.badge.exclamationmark",
                 color: .red
             )
         } else if maxAvg == midAvg && midAvg > earlyAvg * 1.3 && midAvg > lateAvg * 1.3 {
             return SpendingPatternView.PatternAnalysis(
-                title: "Mid-Month Spike",
-                description: "Your spending peaks in the middle of the month",
+                title: String(localized: "Mid-Month Spike"),
+                description: String(localized: "Your spending peaks in the middle of the month"),
                 icon: "waveform.path.ecg",
                 color: .orange
             )
         } else {
             return SpendingPatternView.PatternAnalysis(
-                title: "Consistent Throughout Month",
-                description: "Your spending is fairly evenly distributed throughout the month",
+                title: String(localized: "Consistent Throughout Month"),
+                description: String(localized: "Your spending is fairly evenly distributed throughout the month"),
                 icon: "equal.circle",
                 color: .blue
             )

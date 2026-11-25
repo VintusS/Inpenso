@@ -21,6 +21,8 @@ struct AddExpenseView: View {
     @State private var transactionType: TransactionType = .expense
     @State private var selectedDate: Date = Date()
     @State private var notes: String = ""
+    @State private var selectedAccountID: String = ""
+    @State private var accounts: [Account] = []
     
     // UI States
     @State private var showDatePicker = false
@@ -127,6 +129,10 @@ struct AddExpenseView: View {
             }
             .onAppear {
                 selectedCategoryID = categoryStore.preferredCategoryID(for: selectedCategoryID)
+                accounts = AccountStorage.load()
+                if selectedAccountID.isEmpty, let first = accounts.first {
+                    selectedAccountID = first.id.uuidString
+                }
             }
         }
     }
@@ -159,6 +165,13 @@ struct AddExpenseView: View {
                     amount: $price,
                     currencySymbol: currencySymbol,
                     clearAction: { price = "" }
+                )
+                .padding(.horizontal)
+
+                // Account selector (always visible, allows selecting an account or creating one)
+                AccountSelectorField(
+                    selectedAccountID: $selectedAccountID,
+                    accounts: $accounts
                 )
                 .padding(.horizontal)
                 .padding(.bottom, 8)
@@ -299,7 +312,8 @@ struct AddExpenseView: View {
             category: legacyCategory,
             type: transactionType,
             categoryID: selectedCategory.id,
-            notes: trimmedNotes.isEmpty ? nil : trimmedNotes
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+            accountID: selectedAccountID.isEmpty ? nil : selectedAccountID
         )
         
         // Trigger success haptic
