@@ -18,6 +18,8 @@ struct Expense: Identifiable, Codable, Equatable {
     var notes: String?
     /// Wallet the money moved in or out of. nil only for data not yet migrated.
     var walletID: UUID?
+    /// For a refund: the purchase it pays back. Its spending then counts against that purchase's date.
+    var refundOfID: UUID?
 
     init(
         id: UUID = UUID(),
@@ -28,7 +30,8 @@ struct Expense: Identifiable, Codable, Equatable {
         type: TransactionType = .expense,
         categoryID: String? = nil,
         notes: String? = nil,
-        walletID: UUID? = nil
+        walletID: UUID? = nil,
+        refundOfID: UUID? = nil
     ) {
         self.id = id
         self.title = title
@@ -39,6 +42,7 @@ struct Expense: Identifiable, Codable, Equatable {
         self.categoryID = categoryID ?? category.categoryID
         self.notes = notes
         self.walletID = walletID
+        self.refundOfID = refundOfID
     }
 
     enum CodingKeys: String, CodingKey {
@@ -51,6 +55,7 @@ struct Expense: Identifiable, Codable, Equatable {
         case categoryID
         case notes
         case walletID
+        case refundOfID
     }
 
     init(from decoder: Decoder) throws {
@@ -65,5 +70,49 @@ struct Expense: Identifiable, Codable, Equatable {
         categoryID = try container.decodeIfPresent(String.self, forKey: .categoryID) ?? category.categoryID
         notes = try container.decodeIfPresent(String.self, forKey: .notes)
         walletID = try container.decodeIfPresent(UUID.self, forKey: .walletID)
+        refundOfID = try container.decodeIfPresent(UUID.self, forKey: .refundOfID)
+    }
+
+    /// Effect on the wallet: inflows (income, refunds) are positive.
+    var signedAmount: Double { type.isInflow ? price : -price }
+}
+
+/// One entry's effect on spending: expenses add, refunds subtract. Income is not spending.
+struct SpendingEntry {
+    let categoryID: String
+    let amount: Double
+    /// The day the spending counts on. For a linked refund, the purchase's date.
+    let date: Date
+}
+
+extension Array where Element == Expense {
+    /// Money in minus money out, each on its own date. Cash flow, unlike spending, ignores refund links.
+    var netCashflow: Double { reduce(0) { $0 + $1.signedAmount } }
+}
+
+extension Array where Element == Expense {
+    /// Spending effects of every expense and refund. A refund linked to a purchase in this array
+    /// counts on the purchase's date and in its current category, so a refund that arrives days later
+    /// lowers the right month, and follows the purchase if it is recategorized.
+    var spendingEntries: [SpendingEntry] {
+        let purchases = Dictionary(
+            filter { $0.type == .expense }.map { ($0.id, $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        return compactMap { transaction in
+            switch transaction.type {
+            case .expense:
+                return SpendingEntry(categoryID: transaction.categoryID, amount: transaction.price, date: transaction.date)
+            case .refund:
+                let purchase = transaction.refundOfID.flatMap { purchases[$0] }
+                return SpendingEntry(
+                    categoryID: purchase?.categoryID ?? transaction.categoryID,
+                    amount: -transaction.price,
+                    date: purchase?.date ?? transaction.date
+                )
+            case .income:
+                return nil
+            }
+        }
     }
 }

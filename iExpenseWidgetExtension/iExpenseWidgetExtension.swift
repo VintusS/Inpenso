@@ -62,6 +62,8 @@ struct ExpenseEntry: TimelineEntry {
     let date: Date
     let totalSpent: Double
     let totalIncome: Double
+    /// Money in minus money out this month, by transaction date.
+    let netCashflow: Double
     let spendingByCategory: [Category: Double]
     let monthlyBudget: Double
     
@@ -70,10 +72,6 @@ struct ExpenseEntry: TimelineEntry {
         max(0, monthlyBudget - totalSpent)
     }
 
-    var netCashflow: Double {
-        totalIncome - totalSpent
-    }
-    
     var budgetProgress: Double {
         monthlyBudget > 0 ? min(1.0, totalSpent / monthlyBudget) : 0
     }
@@ -116,6 +114,7 @@ struct ExpenseQuickAddProvider: AppIntentTimelineProvider {
             date: Date(), 
             totalSpent: 0,
             totalIncome: 0,
+            netCashflow: 0,
             spendingByCategory: [:],
             monthlyBudget: 0
         )
@@ -127,7 +126,7 @@ struct ExpenseQuickAddProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: QuickAddConfigurationIntent, in context: Context) async -> Timeline<ExpenseEntry> {
         let entry = await loadEntry()
-        let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(1800))) // refresh every 30min
+        let timeline = Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(1_800))) // refresh every 30min
         return timeline
     }
 
@@ -139,26 +138,28 @@ struct ExpenseQuickAddProvider: AppIntentTimelineProvider {
         let currentMonth = calendar.component(.month, from: Date())
         let currentYear = calendar.component(.year, from: Date())
 
-        let filteredExpenses = expenses.filter { expense in
-            let month = calendar.component(.month, from: expense.date)
-            let year = calendar.component(.year, from: expense.date)
-            return month == currentMonth && year == currentYear
+        func isCurrentMonth(_ date: Date) -> Bool {
+            calendar.component(.month, from: date) == currentMonth && calendar.component(.year, from: date) == currentYear
         }
 
-        let expenseTransactions = filteredExpenses.filter { $0.type == .expense }
-        let incomeTransactions = filteredExpenses.filter { $0.type == .income }
-        let total = expenseTransactions.reduce(0) { $0 + $1.price }
-        let incomeTotal = incomeTransactions.reduce(0) { $0 + $1.price }
+        let incomeTotal = expenses.filter { $0.type == .income && isCurrentMonth($0.date) }.reduce(0) { $0 + $1.price }
 
+        // Refunds lower spending in their category, on the linked purchase's date when there is one.
+        // Floor each category by its full ID before custom categories share the Others bucket.
+        let netByCategoryID = expenses.spendingEntries
+            .filter { isCurrentMonth($0.date) }
+            .reduce(into: [String: Double]()) { $0[$1.categoryID, default: 0] += $1.amount }
         var categoryTotals: [Category: Double] = [:]
-        for expense in expenseTransactions {
-            categoryTotals[expense.category, default: 0] += expense.price
+        for (categoryID, amount) in netByCategoryID where amount > 0 {
+            categoryTotals[Category.category(from: categoryID) ?? .others, default: 0] += amount
         }
+        let total = categoryTotals.values.reduce(0, +)
 
         return ExpenseEntry(
             date: Date(), 
             totalSpent: total,
             totalIncome: incomeTotal,
+            netCashflow: expenses.filter { isCurrentMonth($0.date) }.netCashflow,
             spendingByCategory: categoryTotals,
             monthlyBudget: monthlyBudget
         )
@@ -192,10 +193,10 @@ struct iExpenseWidgetEntryView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "dollarsign.circle.fill")
                         .foregroundColor(entry.overBudget ? .red : .blue)
-                        .font(.system(size: 14))
+                        .font(.subheadline)
                     
                     Text("MONTHLY SPEND")
-                        .font(.system(size: 10, weight: .semibold))
+                        .font(.caption2.weight(.semibold))
                         .foregroundColor(.secondary)
                         .kerning(0.5)
                 }
@@ -210,7 +211,7 @@ struct iExpenseWidgetEntryView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .foregroundColor(entry.overBudget ? .red : .primary)
-                    .shadow(color: Color.black.opacity(0.05), radius: 1, x: 0, y: 1)
+                    .shadow(color: Color(.label).opacity(0.05), radius: 1, x: 0, y: 1)
                 
                 // Budget indicator if budget exists
                 if entry.monthlyBudget > 0 {
@@ -220,13 +221,13 @@ struct iExpenseWidgetEntryView: View {
                             .frame(width: 6, height: 6)
                         
                         Text(entry.overBudget ? "Over Budget" : "\(Int(entry.budgetProgress * 100))% of Budget")
-                            .font(.system(size: 9, weight: .medium))
+                            .font(.caption2.weight(.medium))
                             .foregroundColor(entry.overBudget ? .red : .green)
                     }
                     .padding(.bottom, 2)
                 } else {
                     Text("This Month")
-                        .font(.system(size: 10))
+                        .font(.caption2)
                         .foregroundColor(.secondary)
                         .padding(.bottom, 2)
                 }
@@ -393,7 +394,7 @@ struct iExpenseWidgetEntryView: View {
                 // If no budget, show a message
                 VStack {
                     Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.system(size: 50))
+                        .font(.largeTitle)
                         .foregroundColor(.secondary)
                         .padding(.bottom, 10)
                     
@@ -411,32 +412,7 @@ struct iExpenseWidgetEntryView: View {
     
     // Helper function to get category icon
     private func categoryIcon(for category: Category) -> String {
-        switch category {
-        case .food:
-            return "cart.fill"
-        case .eatingOut:
-            return "fork.knife"
-        case .rent:
-            return "house.fill"
-        case .shopping:
-            return "bag.fill"
-        case .entertainment:
-            return "tv.fill"
-        case .transportation:
-            return "car.fill"
-        case .utilities:
-            return "bolt.fill"
-        case .subscriptions:
-            return "repeat"
-        case .healthcare:
-            return "heart.fill"
-        case .education:
-            return "book.fill"
-        case .work:
-            return "briefcase.fill"
-        case .others:
-            return "ellipsis"
-        }
+        category.defaultIconName
     }
 }
 
@@ -468,15 +444,16 @@ extension ShapeStyle where Self == Color {
     ExpenseEntry(
         date: .now,
         totalSpent: 780.50,
-        totalIncome: 2400.00,
+        totalIncome: 2_400.00,
+        netCashflow: 2_400.00 - 780.50,
         spendingByCategory: [
             .food: 250.00,
             .shopping: 175.75,
             .transportation: 80.25,
             .entertainment: 120.50,
-            .utilities: 154.00
+            .utilities: 154.00,
         ],
-        monthlyBudget: 1000.00
+        monthlyBudget: 1_000.00
     )
 }
 
@@ -486,15 +463,16 @@ extension ShapeStyle where Self == Color {
     ExpenseEntry(
         date: .now,
         totalSpent: 780.50,
-        totalIncome: 2400.00,
+        totalIncome: 2_400.00,
+        netCashflow: 2_400.00 - 780.50,
         spendingByCategory: [
             .food: 250.00,
             .shopping: 175.75,
             .transportation: 80.25,
             .entertainment: 120.50,
-            .utilities: 154.00
+            .utilities: 154.00,
         ],
-        monthlyBudget: 1000.00
+        monthlyBudget: 1_000.00
     )
 }
 
@@ -504,14 +482,15 @@ extension ShapeStyle where Self == Color {
     ExpenseEntry(
         date: .now,
         totalSpent: 780.50,
-        totalIncome: 2400.00,
+        totalIncome: 2_400.00,
+        netCashflow: 2_400.00 - 780.50,
         spendingByCategory: [
             .food: 250.00,
             .shopping: 175.75,
             .transportation: 80.25,
             .entertainment: 120.50,
-            .utilities: 154.00
+            .utilities: 154.00,
         ],
-        monthlyBudget: 1000.00
+        monthlyBudget: 1_000.00
     )
 }

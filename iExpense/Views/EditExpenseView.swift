@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct EditExpenseView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.locale) private var locale
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
@@ -24,6 +25,7 @@ struct EditExpenseView: View {
     @State private var showDatePicker: Bool = false
     @State private var notes: String = ""
     @State private var walletID: UUID?
+    @State private var refundOfID: UUID?
     @State private var keyboardVisible: Bool = false
     @State private var viewID = UUID()
     let expense: Expense
@@ -37,6 +39,7 @@ struct EditExpenseView: View {
         _transactionType = State(initialValue: expense.type)
         _notes = State(initialValue: expense.notes ?? "")
         _walletID = State(initialValue: expense.walletID)
+        _refundOfID = State(initialValue: expense.refundOfID)
     }
 
     // Current currency symbol
@@ -64,8 +67,10 @@ struct EditExpenseView: View {
         return locale.localizedCurrencySymbol(forCurrencyCode: currencyCode) ?? currencyCode
     }
 
+    @State private var showingDeleteConfirmation = false
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
@@ -86,7 +91,7 @@ struct EditExpenseView: View {
                                 TextFormField(
                                     label: "Title",
                                     text: $title,
-                                    placeholder: transactionType == .expense ? "Expense title" : "Income title"
+                                    placeholder: transactionType.titlePlaceholder
                                 )
                                 .padding(.horizontal)
                                 
@@ -100,7 +105,21 @@ struct EditExpenseView: View {
 
                                 WalletFormField(selection: $walletID, wallets: walletsViewModel.wallets, including: expense.walletID)
                                     .padding(.horizontal)
+                                    .padding(.bottom, transactionType == .refund ? 0 : 8)
+
+                                if transactionType == .refund {
+                                    RefundLinkField(
+                                        selection: $refundOfID,
+                                        purchases: RefundLinkField.candidates(
+                                            in: viewModel.expenses.filter { $0.id != expense.id },
+                                            refundDate: selectedDate,
+                                            linkedID: refundOfID
+                                        ),
+                                        currencyCode: settingsViewModel.selectedCurrency
+                                    )
+                                    .padding(.horizontal)
                                     .padding(.bottom, 8)
+                                }
                             }
                         }
                         
@@ -115,7 +134,10 @@ struct EditExpenseView: View {
                         CardView(title: "Category") {
                             CategoryGrid(
                                 selectedCategoryID: $selectedCategoryID,
-                                categories: categoryStore.categoriesForPicker(including: selectedCategoryID)
+                                categories: categoryStore.categoriesForPicker(
+                                    kind: transactionType.categoryKind,
+                                    including: transactionType.categoryKind == expense.type.categoryKind ? expense.categoryID : nil
+                                )
                             )
                                 .padding(.horizontal)
                         }
@@ -143,54 +165,37 @@ struct EditExpenseView: View {
                         
                         // Action buttons
                         VStack(spacing: 12) {
-                            Button(action: {
+                            Button {
                                 guard priceValue != nil else { return }
                                 hideKeyboard()
                                 saveChanges()
                                 HapticFeedback.success()
                                 dismiss()
-                            }) {
-                                let saveButton: some View = HStack {
-                                    Image(systemName: "checkmark.circle.fill")
-                                    Text("Save Changes")
-                                }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
-                                
-                                if #available(iOS 26.0, *) {
-                                    saveButton
-                                        .glassEffect(.regular.tint(.blue).interactive())
-                                } else {
-                                    saveButton
-                                        .background(Color.blue.opacity(0.8))
-                                        .cornerRadius(12)
-                                }
+                            } label: {
+                                Label("Save Changes", systemImage: "checkmark.circle.fill")
+                                    .frame(maxWidth: .infinity, minHeight: 44)
                             }
-                            
-                            Button(action: {
+                            .buttonStyle(.borderedProminent)
+
+                            Button(role: .destructive) {
                                 hideKeyboard()
-                                deleteExpense()
-                                HapticFeedback.impact(style: .medium)
-                                dismiss()
-                            }) {
-                                let deleteButton: some View = HStack {
-                                    Image(systemName: "trash.fill")
-                                    Text("Delete Transaction")
+                                showingDeleteConfirmation = true
+                            } label: {
+                                Label("Delete Transaction", systemImage: "trash.fill")
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+                            }
+                            .buttonStyle(.bordered)
+                            .confirmationDialog(
+                                "Delete this transaction?",
+                                isPresented: $showingDeleteConfirmation,
+                                titleVisibility: .visible
+                            ) {
+                                Button("Delete Transaction", role: .destructive) {
+                                    deleteExpense()
+                                    HapticFeedback.impact(style: .medium)
+                                    dismiss()
                                 }
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(12)
-                                if #available(iOS 26.0, *) {
-                                    deleteButton
-                                        .glassEffect(.regular.tint(.red).interactive())
-                                } else {
-                                    deleteButton
-                                        .background(Color.red.opacity(0.8))
-                                        .cornerRadius(12)
-                                }
+                                Button("Cancel", role: .cancel) {}
                             }
                         }
                         .padding(.top, 10)
@@ -223,13 +228,23 @@ struct EditExpenseView: View {
             .onAppear {
                 viewID = UUID()
             }
+            .onChange(of: transactionType) { _, newType in
+                if newType.categoryKind != categoryStore.category(for: selectedCategoryID).kind {
+                    selectedCategoryID = categoryStore.preferredCategoryID(for: nil, kind: newType.categoryKind)
+                }
+            }
+            .onChange(of: refundOfID) { _, purchaseID in
+                if let purchase = viewModel.expenses.first(where: { $0.id == purchaseID }) {
+                    selectedCategoryID = purchase.categoryID
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                withAnimation {
+                withAnimation(reduceMotion ? nil : .default) {
                     keyboardVisible = true
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-                withAnimation {
+                withAnimation(reduceMotion ? nil : .default) {
                     keyboardVisible = false
                 }
             }
@@ -254,6 +269,7 @@ struct EditExpenseView: View {
             transaction.category = Category.category(from: selectedCategory.id) ?? .others
             transaction.notes = trimmedNotes.isEmpty ? nil : trimmedNotes
             transaction.walletID = walletID
+            transaction.refundOfID = transactionType == .refund ? refundOfID : nil
         }
     }
 

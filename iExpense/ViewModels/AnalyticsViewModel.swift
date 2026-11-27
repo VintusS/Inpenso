@@ -88,8 +88,8 @@ class AnalyticsViewModel: ObservableObject {
     @Published private(set) var insights: [SpendingInsight] = []
     @Published private(set) var averageDailySpend: Double = 0.0
     @Published private(set) var projectedMonthlySpend: Double = 0.0
-    @Published private(set) var biggestExpenseCategory: (String, Double)? = nil
-    @Published private(set) var fastestGrowingCategory: (String, Double)? = nil
+    @Published private(set) var biggestExpenseCategory: (String, Double)?
+    @Published private(set) var fastestGrowingCategory: (String, Double)?
 
     @Published var selectedMonth: Int = Calendar.current.component(.month, from: Date())
     @Published var selectedYear: Int = Calendar.current.component(.year, from: Date())
@@ -102,6 +102,8 @@ class AnalyticsViewModel: ObservableObject {
     @Published var daysRemainingInMonth: Int = 0
 
     private var expenses: [Expense] = []
+    /// Expenses minus refunds, each on the date it counts (see `spendingEntries`).
+    private var spending: [SpendingEntry] = []
 
     init(expenses: [Expense]) {
         self.expenses = expenses
@@ -134,18 +136,19 @@ class AnalyticsViewModel: ObservableObject {
             return expenseMonth == selectedMonth && expenseYear == selectedYear
         }
 
-        let filteredExpenses = filteredTransactions.filter { $0.type == .expense }
         let filteredIncomes = filteredTransactions.filter { $0.type == .income }
+        spending = expenses.spendingEntries
+        let monthSpending = spendingEntries(month: selectedMonth, year: selectedYear)
 
-        totalSpent = filteredExpenses.reduce(0) { $0 + $1.price }
+        spendingByCategory = Self.spendingByCategory(monthSpending)
+        totalSpent = spendingByCategory.values.reduce(0, +)
         totalIncome = filteredIncomes.reduce(0) { $0 + $1.price }
-        netCashflow = totalIncome - totalSpent
+        netCashflow = filteredTransactions.netCashflow
 
-        spendingByCategory = totalsByCategory(for: filteredExpenses)
         incomeByCategory = totalsByCategory(for: filteredIncomes)
         biggestExpenseCategory = spendingByCategory.max(by: { $0.value < $1.value })
 
-        calculateDailySpending(filteredExpenses: filteredExpenses)
+        calculateDailySpending(monthSpending)
         calculateMonthlyTrends()
         calculateCategoryTrends()
 
@@ -154,7 +157,11 @@ class AnalyticsViewModel: ObservableObject {
         calculateDaysRemainingAndBudget()
         generateInsights()
     }
+}
 
+// MARK: - Calculations
+
+extension AnalyticsViewModel {
     private func totalsByCategory(for transactions: [Expense]) -> [String: Double] {
         var totals: [String: Double] = [:]
         for transaction in transactions {
@@ -163,11 +170,24 @@ class AnalyticsViewModel: ObservableObject {
         return totals
     }
 
-    private func calculateDailySpending(filteredExpenses: [Expense]) {
+    private func spendingEntries(month: Int, year: Int) -> [SpendingEntry] {
+        let calendar = Calendar.current
+        return spending.filter {
+            calendar.component(.month, from: $0.date) == month && calendar.component(.year, from: $0.date) == year
+        }
+    }
+
+    /// Net spending per category. A refund larger than the period's purchases floors the category at zero.
+    private static func spendingByCategory(_ entries: [SpendingEntry]) -> [String: Double] {
+        entries.reduce(into: [String: Double]()) { $0[$1.categoryID, default: 0] += $1.amount }
+            .compactMapValues { $0 > 0 ? $0 : nil }
+    }
+
+    private func calculateDailySpending(_ monthSpending: [SpendingEntry]) {
         let calendar = Calendar.current
 
-        let groupedByDay = Dictionary(grouping: filteredExpenses) { expense in
-            calendar.startOfDay(for: expense.date)
+        let groupedByDay = Dictionary(grouping: monthSpending) { entry in
+            calendar.startOfDay(for: entry.date)
         }
 
         var dailyData: [DailySpending] = []
@@ -184,7 +204,8 @@ class AnalyticsViewModel: ObservableObject {
         var currentDate = startOfMonth
         while currentDate <= endOfMonth {
             let dayOfMonth = calendar.component(.day, from: currentDate)
-            let amount = groupedByDay[calendar.startOfDay(for: currentDate)]?.reduce(0) { $0 + $1.price } ?? 0
+            // Signed: a day with only a refund shows below zero, so the days add up to the month's spending.
+            let amount = groupedByDay[calendar.startOfDay(for: currentDate)]?.reduce(0) { $0 + $1.amount } ?? 0
 
             dailyData.append(DailySpending(date: currentDate, amount: amount, dayOfMonth: dayOfMonth))
 
@@ -218,13 +239,7 @@ class AnalyticsViewModel: ObservableObject {
             let month = calendar.component(.month, from: date)
             let year = calendar.component(.year, from: date)
 
-            let totalAmount = expenses
-                .filter { expense in
-                    let expenseMonth = calendar.component(.month, from: expense.date)
-                    let expenseYear = calendar.component(.year, from: expense.date)
-                    return expense.type == .expense && expenseMonth == month && expenseYear == year
-                }
-                .reduce(0) { $0 + $1.price }
+            let totalAmount = Self.spendingByCategory(spendingEntries(month: month, year: year)).values.reduce(0, +)
 
             trends.append(MonthlyTrend(month: month, year: year, amount: totalAmount))
         }
@@ -240,12 +255,6 @@ class AnalyticsViewModel: ObservableObject {
     private func calculateCategoryTrends() {
         let calendar = Calendar.current
 
-        let currentMonthExpenses = expenses.filter { expense in
-            let expenseMonth = calendar.component(.month, from: expense.date)
-            let expenseYear = calendar.component(.year, from: expense.date)
-            return expense.type == .expense && expenseMonth == selectedMonth && expenseYear == selectedYear
-        }
-
         var previousMonthComponents = DateComponents()
         previousMonthComponents.month = selectedMonth
         previousMonthComponents.year = selectedYear
@@ -260,14 +269,8 @@ class AnalyticsViewModel: ObservableObject {
         let previousMonth = calendar.component(.month, from: previousMonthDate)
         let previousYear = calendar.component(.year, from: previousMonthDate)
 
-        let previousMonthExpenses = expenses.filter { expense in
-            let expenseMonth = calendar.component(.month, from: expense.date)
-            let expenseYear = calendar.component(.year, from: expense.date)
-            return expense.type == .expense && expenseMonth == previousMonth && expenseYear == previousYear
-        }
-
-        let currentCategoryTotals = totalsByCategory(for: currentMonthExpenses)
-        let previousCategoryTotals = totalsByCategory(for: previousMonthExpenses)
+        let currentCategoryTotals = Self.spendingByCategory(spendingEntries(month: selectedMonth, year: selectedYear))
+        let previousCategoryTotals = Self.spendingByCategory(spendingEntries(month: previousMonth, year: previousYear))
         let categoryIDs = Set(currentCategoryTotals.keys).union(previousCategoryTotals.keys)
 
         let trends = categoryIDs.compactMap { categoryID -> CategoryTrend? in
