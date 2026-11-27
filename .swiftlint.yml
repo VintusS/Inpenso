@@ -13,7 +13,6 @@ opt_in_rules:
   - extension_access_modifier
   - fatal_error_message
   - file_header
-  - forbidden_super_call
   - implicit_return
   - joined_default_parameter
   - legacy_random
@@ -38,16 +37,19 @@ excluded:
   - .build
   - Inpenso.xcodeproj
   - build
-
-line_length:
-  warning: 120
-  error: 200
+  - iExpense/ViewTests
 
 indentation: 2
 
 type_name:
   min_length: 3
   max_length: 40
+  # Product-prefixed names (iExpense...) are the app/widget entry points.
+  excluded:
+    - iExpenseApp
+    - iExpenseWidgetEntryView
+    - iExpenseWidgetExtension
+    - iExpenseWidgetExtensionBundle
 
 identifier_name:
   min_length: 1
@@ -75,6 +77,3 @@ nesting:
 
 trailing_comma:
   mandatory_comma: true
-
-trailing_closure:
-  only_single_parameter: true

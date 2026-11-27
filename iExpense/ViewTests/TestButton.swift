@@ -26,13 +26,13 @@ struct TestButton: View {
 //        .disabled(true)
         
         if #available(iOS 26.0, *) {
-            Button("here"){}
+            Button("here") {}
                 .buttonStyle(.glass)
         } else {
             // Fallback on earlier versions
         }
         if #available(iOS 26.0, *) {
-            Button("here"){}
+            Button("here") {}
                 .buttonStyle(.glass)
             
         } else {

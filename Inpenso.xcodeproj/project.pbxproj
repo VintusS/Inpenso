@@ -83,12 +83,23 @@
 			);
 			target = 714E82F22DBE3124005ED7BB /* Inpenso */;
 		};
+		AA0000000000000000000E01 /* Exceptions for "iExpense" folder in "Inpenso" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				ViewTests/MusicTabView.swift,
+				ViewTests/SegmentedControlView.swift,
+				ViewTests/TestButton.swift,
+				ViewTests/TestRecentSpending.swift,
+			);
+			target = 714E82F22DBE3124005ED7BB /* Inpenso */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		714E82F52DBE3124005ED7BB /* iExpense */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
+				AA0000000000000000000E01 /* Exceptions for "iExpense" folder in "Inpenso" target */,
 				714E83342DBE3694005ED7BB /* Exceptions for "iExpense" folder in "InpensoWidgetExtensionExtension" target */,
 			);
 			path = iExpense;

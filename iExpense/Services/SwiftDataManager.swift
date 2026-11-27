@@ -23,7 +23,7 @@ class SwiftDataManager {
     func createContainer() throws -> ModelContainer {
         let schema = Schema([
             ExpenseItem.self,
-            BudgetItem.self
+            BudgetItem.self,
         ])
         
         let modelConfiguration = ModelConfiguration(

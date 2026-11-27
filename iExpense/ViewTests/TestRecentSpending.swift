@@ -14,7 +14,7 @@ struct HomeViewTest: View {
     @State private var showingAddExpense = false
     @State private var showRecentExpenses = true
     @State private var animateCards = false
-    @State private var selectedExpenseToEdit: Expense? = nil
+    @State private var selectedExpenseToEdit: Expense?
     @State private var showingEditExpense = false
     
     private let recentDaysToShow = 7
@@ -60,8 +60,6 @@ struct HomeViewTest: View {
             }
         }
     }
-    
-    
     
     // MARK: - Recent Spending Card
     

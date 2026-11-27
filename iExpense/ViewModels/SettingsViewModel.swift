@@ -16,35 +16,53 @@ enum AppTheme: String, CaseIterable, Identifiable {
     
     var displayName: String {
         switch self {
-        case .light: return "Light"
-        case .dark: return "Dark"
-        case .system: return "System"
+        case .light:
+            return "Light"
+        case .dark:
+            return "Dark"
+        case .system:
+            return "System"
         }
     }
     
     var colorScheme: ColorScheme? {
         switch self {
-        case .light: return .light
-        case .dark: return .dark
-        case .system: return nil
+        case .light:
+            return .light
+        case .dark:
+            return .dark
+        case .system:
+            return nil
         }
     }
 }
 
 // Available currencies with symbols - making this global to avoid actor isolation issues
-let availableCurrencies: [(code: String, symbol: String, name: String)] = [
-    ("USD", "$", "US Dollar"),
-    ("EUR", "€", "Euro"),
-    ("MDL", "L", "Moldovan Leu"),
-    ("GBP", "£", "British Pound"),
-    ("JPY", "¥", "Japanese Yen"),
-    ("CAD", "$", "Canadian Dollar"),
-    ("AUD", "$", "Australian Dollar"),
-    ("CHF", "Fr", "Swiss Franc"),
-    ("CNY", "¥", "Chinese Yuan"),
-    ("INR", "₹", "Indian Rupee"),
-    ("RUB", "₽", "Russian Ruble"),
-    ("IDR", "Rp", "Indonesian Rupiah")
+struct CurrencyOption {
+    let code: String
+    let symbol: String
+    let name: String
+
+    init(_ code: String, _ symbol: String, _ name: String) {
+        self.code = code
+        self.symbol = symbol
+        self.name = name
+    }
+}
+
+let availableCurrencies: [CurrencyOption] = [
+    CurrencyOption("USD", "$", "US Dollar"),
+    CurrencyOption("EUR", "€", "Euro"),
+    CurrencyOption("MDL", "L", "Moldovan Leu"),
+    CurrencyOption("GBP", "£", "British Pound"),
+    CurrencyOption("JPY", "¥", "Japanese Yen"),
+    CurrencyOption("CAD", "$", "Canadian Dollar"),
+    CurrencyOption("AUD", "$", "Australian Dollar"),
+    CurrencyOption("CHF", "Fr", "Swiss Franc"),
+    CurrencyOption("CNY", "¥", "Chinese Yuan"),
+    CurrencyOption("INR", "₹", "Indian Rupee"),
+    CurrencyOption("RUB", "₽", "Russian Ruble"),
+    CurrencyOption("IDR", "Rp", "Indonesian Rupiah"),
 ]
 
 @MainActor
