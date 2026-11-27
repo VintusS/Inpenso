@@ -11,7 +11,7 @@ enum RecurringService {
     static let maxMonthsBack = 12
 
     private static var defaults: UserDefaults? {
-        UserDefaults(suiteName: StorageService.appGroupID)
+        StorageService.sharedDefaults
     }
 
     // MARK: - Rules storage

@@ -22,6 +22,13 @@
 			remoteGlobalIDString = 714E83162DBE3597005ED7BB;
 			remoteInfo = iExpenseWidgetExtensionExtension;
 		};
+		AA0000000000000000000D08 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 714E82EB2DBE3124005ED7BB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 714E82F22DBE3124005ED7BB;
+			remoteInfo = Inpenso;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -47,6 +54,7 @@
 		714E834C2DBE654D005ED7BB /* ProjectPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectPlan.swift; sourceTree = "<group>"; };
 		AA0000000000000000000C01 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		AA0000000000000000000C02 /* App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "App-Info.plist"; sourceTree = "<group>"; };
+		AA0000000000000000000D02 /* InpensoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InpensoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -95,6 +103,11 @@
 			path = iExpenseWidgetExtension;
 			sourceTree = "<group>";
 		};
+		AA0000000000000000000D03 /* InpensoTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = InpensoTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -114,6 +127,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000D05 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -124,6 +144,7 @@
 				714E834C2DBE654D005ED7BB /* ProjectPlan.swift */,
 				714E833D2DBE39CE005ED7BB /* iExpenseWidgetExtensionExtension.entitlements */,
 				714E82F52DBE3124005ED7BB /* iExpense */,
+				AA0000000000000000000D03 /* InpensoTests */,
 				714E831D2DBE3598005ED7BB /* iExpenseWidgetExtension */,
 				714E83182DBE3597005ED7BB /* Frameworks */,
 				714E82F42DBE3124005ED7BB /* Products */,
@@ -144,6 +165,7 @@
 			children = (
 				714E82F32DBE3124005ED7BB /* Inpenso.app */,
 				714E83172DBE3597005ED7BB /* InpensoWidgetExtensionExtension.appex */,
+				AA0000000000000000000D02 /* InpensoTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -206,6 +228,27 @@
 			productReference = 714E83172DBE3597005ED7BB /* InpensoWidgetExtensionExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		AA0000000000000000000D01 /* InpensoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA0000000000000000000D09 /* Build configuration list for PBXNativeTarget "InpensoTests" */;
+			buildPhases = (
+				AA0000000000000000000D04 /* Sources */,
+				AA0000000000000000000D05 /* Frameworks */,
+				AA0000000000000000000D06 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA0000000000000000000D07 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				AA0000000000000000000D03 /* InpensoTests */,
+			);
+			name = InpensoTests;
+			productName = InpensoTests;
+			productReference = AA0000000000000000000D02 /* InpensoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -216,6 +259,9 @@
 				LastSwiftUpdateCheck = 1630;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
+					AA0000000000000000000D01 = {
+						TestTargetID = 714E82F22DBE3124005ED7BB;
+					};
 					714E82F22DBE3124005ED7BB = {
 						CreatedOnToolsVersion = 16.3;
 					};
@@ -240,6 +286,7 @@
 			targets = (
 				714E82F22DBE3124005ED7BB /* Inpenso */,
 				714E83162DBE3597005ED7BB /* InpensoWidgetExtensionExtension */,
+				AA0000000000000000000D01 /* InpensoTests */,
 			);
 		};
 /* End PBXProject section */
@@ -253,6 +300,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		714E83152DBE3597005ED7BB /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA0000000000000000000D06 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -278,6 +332,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AA0000000000000000000D04 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -285,6 +346,11 @@
 			isa = PBXTargetDependency;
 			target = 714E83162DBE3597005ED7BB /* InpensoWidgetExtensionExtension */;
 			targetProxy = 714E832B2DBE3599005ED7BB /* PBXContainerItemProxy */;
+		};
+		AA0000000000000000000D07 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 714E82F22DBE3124005ED7BB /* Inpenso */;
+			targetProxy = AA0000000000000000000D08 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -546,6 +612,38 @@
 			};
 			name = Release;
 		};
+		AA0000000000000000000D0A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "$(INPENSO_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(INPENSO_BUNDLE_ID).Tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Inpenso.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Inpenso";
+			};
+			name = Debug;
+		};
+		AA0000000000000000000D0B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "$(INPENSO_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(INPENSO_BUNDLE_ID).Tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Inpenso.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Inpenso";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -572,6 +670,15 @@
 			buildConfigurations = (
 				714E83302DBE3599005ED7BB /* Debug */,
 				714E83312DBE3599005ED7BB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA0000000000000000000D09 /* Build configuration list for PBXNativeTarget "InpensoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA0000000000000000000D0A /* Debug */,
+				AA0000000000000000000D0B /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

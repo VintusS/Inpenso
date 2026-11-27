@@ -73,8 +73,14 @@ struct StorageService {
     static let appGroupID = Bundle.main.object(forInfoDictionaryKey: "AppGroupIdentifier") as? String
         ?? "group.com.vintuss.Inpenso"
 
+    /// App-group defaults shared with the widget. Nil in the unit-test host so tests never touch real data.
+    static var sharedDefaults: UserDefaults? { userDefaults }
+
     private static var userDefaults: UserDefaults? {
-        UserDefaults(suiteName: appGroupID)
+        #if DEBUG
+        if isUnitTestHost { return nil }
+        #endif
+        return UserDefaults(suiteName: appGroupID)
     }
 
     private static let expensesKey = "expenses"
@@ -84,8 +90,16 @@ struct StorageService {
 
     private static let logger = Logger(subsystem: "com.vintuss.Inpenso", category: "TransactionStorage")
 
+    #if DEBUG
+    static let isUnitTestHost = ProcessInfo.processInfo.environment["INPENSO_UNIT_TESTS"] == "1"
+    static var testLedgerURL: URL?
+    #endif
+
     private static var expensesURL: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
+        #if DEBUG
+        if isUnitTestHost { return testLedgerURL }
+        #endif
+        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupID)?
             .appendingPathComponent("transactions.json")
     }
 

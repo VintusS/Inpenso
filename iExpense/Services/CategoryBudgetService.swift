@@ -11,7 +11,7 @@ enum CategoryBudgetService {
     private static let key = "categoryBudgets"
 
     private static var defaults: UserDefaults? {
-        UserDefaults(suiteName: StorageService.appGroupID)
+        StorageService.sharedDefaults
     }
 
     static func load() -> [String: Double] {

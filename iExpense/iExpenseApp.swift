@@ -11,6 +11,9 @@ import Foundation
 @main
 struct iExpenseApp: App {
     init() {
+        #if DEBUG
+        if StorageService.isUnitTestHost { return }
+        #endif
         // On app launch, ensure settings are synced to the shared UserDefaults
         syncSettingsToSharedDefaults()
     }
@@ -20,17 +23,29 @@ struct iExpenseApp: App {
     
     var body: some Scene {
         WindowGroup {
-            MainTabView()
-                // Use the optional SwiftData container that won't affect existing code
-                .withSwiftData()
-                // Perform the migration silently on app startup
-                .task {
-                    await SwiftDataProvider.shared.startMigration()
-                }
-                .environmentObject(settingsViewModel)
-                .environmentObject(categoryStore)
-                .preferredColorScheme(settingsViewModel.selectedTheme.colorScheme)
+            #if DEBUG
+            if StorageService.isUnitTestHost {
+                Color.clear
+            } else {
+                appContent
+            }
+            #else
+            appContent
+            #endif
         }
+    }
+
+    private var appContent: some View {
+        MainTabView()
+            // Use the optional SwiftData container that won't affect existing code
+            .withSwiftData()
+            // Perform the migration silently on app startup
+            .task {
+                await SwiftDataProvider.shared.startMigration()
+            }
+            .environmentObject(settingsViewModel)
+            .environmentObject(categoryStore)
+            .preferredColorScheme(settingsViewModel.selectedTheme.colorScheme)
     }
     
     // This function ensures that all settings needed by widgets are available in shared UserDefaults
