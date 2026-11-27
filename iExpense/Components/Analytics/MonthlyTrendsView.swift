@@ -109,7 +109,7 @@ struct CategoryTrendsView: View {
             return ((currentAmount - previousAmount) / previousAmount) * 100
         }
         var isIncreasing: Bool {
-            return currentAmount > previousAmount
+            currentAmount > previousAmount
         }
     }
     
@@ -283,8 +283,8 @@ struct ProjectionView: View {
         let trendData = (1...6).map { month in
             MonthlyTrend(
                 month: month,
-                year: 2025,
-                amount: Double.random(in: 1500...3000)
+                year: 2_025,
+                amount: Double.random(in: 1_500...3_000)
             )
         }
         
@@ -296,24 +296,24 @@ struct ProjectionView: View {
             CategoryTrendsView.CategoryTrend(
                 categoryID: Category.food.categoryID,
                 month: 5,
-                year: 2025,
+                year: 2_025,
                 currentAmount: 450.50,
                 previousAmount: 380.25
             ),
             CategoryTrendsView.CategoryTrend(
                 categoryID: Category.transportation.categoryID,
                 month: 5,
-                year: 2025,
+                year: 2_025,
                 currentAmount: 220.75,
                 previousAmount: 280.50
             ),
             CategoryTrendsView.CategoryTrend(
                 categoryID: Category.entertainment.categoryID,
                 month: 5,
-                year: 2025,
+                year: 2_025,
                 currentAmount: 180.25,
                 previousAmount: 120.75
-            )
+            ),
         ]
         
         CategoryTrendsView(categoryTrends: categoryTrends)
@@ -321,8 +321,8 @@ struct ProjectionView: View {
         
         // Projection preview
         ProjectionView(
-            projectedMonthlySpend: 2850.50,
-            currentBudget: 3000.00
+            projectedMonthlySpend: 2_850.50,
+            currentBudget: 3_000.00
         )
     }
     .padding()

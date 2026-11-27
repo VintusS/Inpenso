@@ -63,7 +63,7 @@ struct RecurringDueCard: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                .shadow(color: Color(.label).opacity(0.05), radius: 10, x: 0, y: 5)
         )
         .alert("Recurring", isPresented: Binding(
             get: { recurringViewModel.postError != nil },
@@ -80,8 +80,8 @@ struct RecurringDueCard: View {
         let category = categoryStore.category(for: rule.categoryID)
         return HStack(spacing: 12) {
             Image(systemName: category.iconName)
-                .font(.system(size: 14))
-                .foregroundColor(.white)
+                .font(.subheadline)
+                .foregroundStyle(category.color.badgeForeground)
                 .frame(width: 28, height: 28)
                 .background(category.color)
                 .cornerRadius(6)

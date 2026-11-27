@@ -13,9 +13,9 @@ struct TextFormField: View {
     @Binding var text: String
     var placeholder: String = ""
     var keyboardType: UIKeyboardType = .default
-    var leadingIcon: String? = nil
-    var trailingIcon: String? = nil
-    var trailingAction: (() -> Void)? = nil
+    var leadingIcon: String?
+    var trailingIcon: String?
+    var trailingAction: (() -> Void)?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -30,18 +30,21 @@ struct TextFormField: View {
                     Image(systemName: iconName)
                         .foregroundColor(.secondary)
                         .frame(width: 20)
+                        .accessibilityHidden(true)
                 }
                 
                 TextField(placeholder, text: $text)
                     .keyboardType(keyboardType)
                 
                 if let iconName = trailingIcon {
-                    Button(action: {
+                    Button {
                         trailingAction?()
-                    }) {
+                    } label: {
                         Image(systemName: iconName)
                             .foregroundColor(.secondary)
+                            .frame(minWidth: 44, minHeight: 44)
                     }
+                    .accessibilityLabel("Clear \(label)")
                     .disabled(trailingAction == nil)
                 }
             }
@@ -60,7 +63,7 @@ struct CurrencyFormField: View {
     @Binding var amount: String
     var currencySymbol: String
     var fractionDigits: Int = 2
-    var clearAction: (() -> Void)? = nil
+    var clearAction: (() -> Void)?
 
     private var input: AmountInput {
         AmountInput(fractionDigits: fractionDigits, locale: locale)
@@ -89,16 +92,18 @@ struct CurrencyFormField: View {
                 
                 // Clear button
                 if !amount.isEmpty {
-                    Button(action: {
+                    Button {
                         if let clearAction = clearAction {
                             clearAction()
                         } else {
                             amount = ""
                         }
-                    }) {
+                    } label: {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundColor(.secondary)
+                            .frame(minWidth: 44, minHeight: 44)
                     }
+                    .accessibilityLabel("Clear Amount")
                 }
             }
             .padding(.vertical, 10)

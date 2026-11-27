@@ -9,11 +9,12 @@ import SwiftUI
 
 /// An expandable date picker with toggle functionality
 struct DatePickerCard: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let title: String
     @Binding var selectedDate: Date
     @Binding var isExpanded: Bool
     var maxDate: Date = Date()
-    var dateRange: ClosedRange<Date>? = nil
+    var dateRange: ClosedRange<Date>?
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -23,11 +24,11 @@ struct DatePickerCard: View {
             
             VStack(spacing: 0) {
                 // Date display button
-                Button(action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                Button {
+                    withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7)) {
                         isExpanded.toggle()
                     }
-                }) {
+                } label: {
                     HStack {
                         Image(systemName: "calendar")
                             .foregroundColor(.accentColor)
@@ -38,6 +39,7 @@ struct DatePickerCard: View {
                         Spacer()
                         
                         Image(systemName: "chevron.down")
+                            .accessibilityHidden(true)
                             .foregroundColor(.secondary)
                             .rotationEffect(Angle(degrees: isExpanded ? 180 : 0))
                     }

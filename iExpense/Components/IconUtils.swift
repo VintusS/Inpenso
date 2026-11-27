@@ -11,45 +11,49 @@ import SwiftUI
 enum IconUtils {
     /// Returns the system icon name for a given category
     static func iconName(for category: Category) -> String {
-        switch category {
-        case .food:
-            return "cart.fill"
-        case .eatingOut:
-            return "fork.knife"
-        case .rent:
-            return "house.fill"
-        case .shopping:
-            return "bag.fill"
-        case .entertainment:
-            return "tv.fill"
-        case .transportation:
-            return "car.fill"
-        case .utilities:
-            return "bolt.fill"
-        case .subscriptions:
-            return "repeat"
-        case .healthcare:
-            return "heart.fill"
-        case .education:
-            return "book.fill"
-        case .work:
-            return "briefcase.fill"
-        case .others:
-            return "ellipsis"
-        }
+        category.defaultIconName
     }
     
     /// Returns a styled category icon view with appropriate color and shape
     static func styledIcon(for category: Category, size: CGFloat = 24, padding: CGFloat = 8) -> some View {
-        ZStack {
-            Circle()
-                .fill(category.color)
-                .frame(width: size + padding * 2, height: size + padding * 2)
-            
-            Image(systemName: iconName(for: category))
-                .font(.system(size: size))
-                .foregroundColor(.white)
+        CategoryArtwork(category: category, size: size, padding: padding)
+    }
+}
+
+private struct CategoryArtwork: View {
+    let category: Category
+    let size: CGFloat
+    let padding: CGFloat
+    @ScaledMetric(relativeTo: .title2) private var scale = 1.0
+
+    var body: some View {
+        Image(systemName: category.defaultIconName)
+            .font(Font.system(size: size * scale))
+            .foregroundStyle(category.color.badgeForeground)
+            .frame(width: (size + padding * 2) * scale, height: (size + padding * 2) * scale)
+            .background(category.color, in: Circle())
+            .accessibilityHidden(true)
+    }
+}
+
+extension Color {
+    /// Chooses the higher-contrast foreground for a solid badge color.
+    var badgeForeground: Color {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        guard UIColor(self).getRed(&red, green: &green, blue: &blue, alpha: nil) else {
+            return .primary
         }
+
+        func linearize(_ component: CGFloat) -> CGFloat {
+            component <= 0.04045 ? component / 12.92 : pow((component + 0.055) / 1.055, 2.4)
+        }
+
+        let luminance = 0.2126 * linearize(red) + 0.7152 * linearize(green) + 0.0722 * linearize(blue)
+        let contrastOnBlack = (luminance + 0.05) / 0.05
+        let contrastOnWhite = 1.05 / (luminance + 0.05)
+        return contrastOnBlack >= contrastOnWhite ? .black : .white
     }
 }
 

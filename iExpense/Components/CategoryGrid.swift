@@ -8,16 +8,16 @@
 import SwiftUI
 
 struct CategoryGrid: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Binding var selectedCategoryID: String
     let categories: [FinanceCategory]
-    var onCategorySelected: (() -> Void)? = nil
+    var onCategorySelected: (() -> Void)?
     
-    // Number of columns in the grid
-    private let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible()), count: dynamicTypeSize.isAccessibilitySize ? 2 : 3)
+    }
     
     var body: some View {
         LazyVGrid(columns: columns, spacing: 15) {
@@ -26,7 +26,7 @@ struct CategoryGrid: View {
                     category: category,
                     isSelected: selectedCategoryID == category.id,
                     action: {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        withAnimation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7)) {
                             selectedCategoryID = category.id
                         }
                         HapticFeedback.impact()
@@ -45,12 +45,11 @@ struct CategoryGridWithCallback: View {
     let categories: [FinanceCategory]
     let onCategorySelected: (FinanceCategory) -> Void
     
-    // Number of columns in the grid
-    private let columns = [
-        GridItem(.flexible()),
-        GridItem(.flexible()),
-        GridItem(.flexible())
-    ]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible()), count: dynamicTypeSize.isAccessibilitySize ? 2 : 3)
+    }
     
     var body: some View {
         LazyVGrid(columns: columns, spacing: 15) {

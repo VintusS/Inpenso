@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct CategoryButton: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let category: FinanceCategory
     let isSelected: Bool
     let action: () -> Void
@@ -24,34 +26,33 @@ struct CategoryButton: View {
                     
                     // Icon
                     Image(systemName: category.iconName)
-                        .font(.system(size: 22))
-                        .foregroundColor(.white)
+                        .font(.title2)
+                        .foregroundStyle(category.color.badgeForeground)
                     
                     // Selection indicator
                     if isSelected {
                         Circle()
-                            .stroke(Color.white, lineWidth: 3)
+                            .stroke(Color(.systemBackground), lineWidth: 3)
                             .frame(width: 56, height: 56)
                     }
                 }
+                .accessibilityHidden(true)
                 .shadow(color: isSelected ? category.color.opacity(0.6) : Color.clear, radius: isSelected ? 5 : 0)
                 
-                // Category name in fixed-height container
                 Text(category.displayName)
                     .font(.caption)
                     .fontWeight(isSelected ? .bold : .medium)
                     .foregroundColor(isSelected ? .primary : .secondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .lineLimit(2)
-                    .frame(height: 32)
-                    .minimumScaleFactor(0.8)
+                    .frame(minHeight: 32)
             }
-            .frame(width: 80)
-            .scaleEffect(isSelected ? 1.05 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+            .frame(maxWidth: dynamicTypeSize.isAccessibilitySize ? .infinity : 80)
+            .scaleEffect(isSelected && !reduceMotion ? 1.05 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
         }
-        .buttonStyle(PlainButtonStyle())
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

@@ -105,9 +105,9 @@ struct CategoryBreakdownView: View {
     let sampleData: [String: Double] = [
         Category.food.categoryID: 450.50,
         Category.transportation.categoryID: 220.75,
-        Category.rent.categoryID: 1200.00,
+        Category.rent.categoryID: 1_200.00,
         Category.entertainment.categoryID: 180.25,
-        Category.utilities.categoryID: 310.80
+        Category.utilities.categoryID: 310.80,
     ]
     
     CategoryBreakdownView(

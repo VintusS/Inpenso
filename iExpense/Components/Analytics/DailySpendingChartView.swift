@@ -58,7 +58,7 @@ struct DailySpendingChartView: View {
                     }
                 }
                 .chartXAxis {
-                    AxisMarks(values: .stride(by: 5)) { value in
+                    AxisMarks(values: .stride(by: 5)) { _ in
                         AxisGridLine()
                         AxisValueLabel()
                     }
@@ -79,7 +79,7 @@ struct DailySpendingChartView: View {
 #Preview {
     let sampleData = (1...28).map { day in
         DailySpendingChartView.DailySpending(
-            date: Calendar.current.date(from: DateComponents(year: 2025, month: 5, day: day)) ?? Date(),
+            date: Calendar.current.date(from: DateComponents(year: 2_025, month: 5, day: day)) ?? Date(),
             dayOfMonth: day,
             amount: Double.random(in: 0...100)
         )

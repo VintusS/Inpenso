@@ -48,13 +48,12 @@ struct SummaryCard: View {
             HStack(alignment: .top, spacing: 6) {
                 Image(systemName: icon)
                     .foregroundColor(color)
+                    .accessibilityHidden(true)
 
                 Text(title)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.8)
             }
 
             Spacer()
@@ -63,12 +62,9 @@ struct SummaryCard: View {
             formattedValue
                 .font(.title3)
                 .fontWeight(.bold)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
         }
         .padding()
-        .frame(height: 110)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 110, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(.secondarySystemBackground))
@@ -81,7 +77,7 @@ struct SummaryCard: View {
             case .currency:
                 Text(value, format: .currency(code: currencyCode))
             case .percent:
-                Text("\(Int(value))%")
+                Text(value / 100, format: .percent.precision(.fractionLength(0)))
                     .foregroundColor(value >= 90 ? .red : (value >= 75 ? .orange : .primary))
             case .days:
                 Text("\(Int(value)) days")
@@ -101,9 +97,10 @@ struct SummaryCard: View {
 struct SummaryCardGrid: View {
     var summaryCards: [SummaryCard]
     var columns: Int = 2
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     
     var body: some View {
-        let gridItems = Array(repeating: GridItem(.flexible(), spacing: 12), count: columns)
+        let gridItems = Array(repeating: GridItem(.flexible(), spacing: 12), count: dynamicTypeSize.isAccessibilitySize ? 1 : columns)
         
         LazyVGrid(columns: gridItems, spacing: 12) {
             ForEach(0..<summaryCards.count, id: \.self) { index in
@@ -118,7 +115,7 @@ struct SummaryCardGrid: View {
     VStack(spacing: 20) {
         SummaryCard(
             title: "Total Spent",
-            value: 1234.56,
+            value: 1_234.56,
             valueFormat: .currency,
             icon: "dollarsign.circle.fill",
             color: .blue
@@ -127,7 +124,7 @@ struct SummaryCardGrid: View {
         SummaryCardGrid(summaryCards: [
             SummaryCard(
                 title: "Total Spent",
-                value: 1234.56,
+                value: 1_234.56,
                 valueFormat: .currency,
                 icon: "dollarsign.circle.fill",
                 color: .blue
@@ -152,7 +149,7 @@ struct SummaryCardGrid: View {
                 valueFormat: .noBudget,
                 icon: "chart.pie.fill",
                 color: .gray
-            )
+            ),
         ])
     }
     .padding()

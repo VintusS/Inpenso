@@ -79,21 +79,11 @@ struct BudgetInputView: View {
                     draft = nil
                     onSave()
                 } label: {
-                    let saveBudgetButton: some View = Text("Save Budget")
+                    Text("Save Budget")
                         .fontWeight(.semibold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .foregroundColor(.white)
-                    
-                    if #available(iOS 26.0, *) {
-                        saveBudgetButton
-                            .glassEffect(.regular.tint(.blue).interactive())
-                    } else {
-                        saveBudgetButton
-                            .background(Color.blue.opacity(0.8))
-                            .cornerRadius(12)
-                    }
+                        .frame(maxWidth: .infinity, minHeight: 44)
                 }
+                .buttonStyle(.borderedProminent)
                 .disabled(draft.map { amountInput.value(of: $0) == nil } ?? false)
             }
             .padding()
@@ -116,6 +106,7 @@ struct BudgetInputView: View {
 
 /// A component that displays budget status information
 struct BudgetStatusView: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let totalSpent: Double
     let currentBudget: Double
     let daysRemainingInMonth: Int
@@ -137,26 +128,33 @@ struct BudgetStatusView: View {
     }
     
     var body: some View {
+        let layout = dynamicTypeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+            : AnyLayout(HStackLayout())
+
         VStack(alignment: .leading, spacing: 12) {
             Text("Budget Status")
                 .font(.headline)
             
             VStack(spacing: 16) {
                 // Progress bar
-                let progress = min(1.0, totalSpent / currentBudget)
+                let usage = totalSpent / currentBudget
+                let progress = min(1, usage)
                 let progressColor: Color = progress < 0.75 ? .blue : (progress < 0.9 ? .orange : .red)
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("\(Int(progress * 100))% Used")
+                    layout {
+                        Text("\(usage.formatted(.percent.precision(.fractionLength(0)))) Used")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                         
-                        Spacer()
+                        if !dynamicTypeSize.isAccessibilitySize { Spacer() }
                         
-                        Text("\(Int((1 - progress) * 100))% Remaining")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
+                        if totalSpent <= currentBudget {
+                            Text("\((1 - usage).formatted(.percent.precision(.fractionLength(0)))) Remaining")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     
                     GeometryReader { geometry in
@@ -175,7 +173,7 @@ struct BudgetStatusView: View {
                     .frame(height: 12)
                 }
                 
-                HStack {
+                layout {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Spent")
                             .font(.caption)
@@ -186,23 +184,24 @@ struct BudgetStatusView: View {
                             .fontWeight(.bold)
                     }
                     
-                    Spacer()
+                    if !dynamicTypeSize.isAccessibilitySize { Spacer() }
                     
-                    VStack(alignment: .trailing, spacing: 4) {
-                        Text("Remaining")
+                    VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 4) {
+                        Text(totalSpent > currentBudget ? "Over Budget" : "Remaining")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         
-                        Text(max(0, currentBudget - totalSpent), format: .currency(code: currencyCode))
+                        Text(abs(currentBudget - totalSpent), format: .currency(code: currencyCode))
+                            .foregroundStyle(totalSpent > currentBudget ? Color.red : Color.primary)
                             .font(.title3)
                             .fontWeight(.bold)
                     }
                 }
                 
-                if daysRemainingInMonth > 0 {
+                if daysRemainingInMonth > 0 && totalSpent <= currentBudget {
                     Divider()
                     
-                    HStack {
+                    layout {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Days Remaining")
                                 .font(.caption)
@@ -213,9 +212,9 @@ struct BudgetStatusView: View {
                                 .fontWeight(.semibold)
                         }
                         
-                        Spacer()
+                        if !dynamicTypeSize.isAccessibilitySize { Spacer() }
                         
-                        VStack(alignment: .trailing, spacing: 4) {
+                        VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 4) {
                             Text("Daily Budget Left")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -285,14 +284,14 @@ struct BudgetRecommendationsView: View {
                                     .frame(width: 8, height: 8)
                                 
                                 Text(category.displayName)
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(.subheadline.weight(.semibold))
                             }
                         }
                         
                         Spacer()
                         
                         Text(amount, format: .currency(code: currencyCode))
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.subheadline.weight(.semibold))
                     }
                     .padding(.horizontal)
                 }
@@ -318,7 +317,7 @@ struct BudgetRecommendationsView: View {
                         
                         HStack {
                             Text(suggestedBudget, format: .currency(code: currencyCode))
-                                .font(.system(size: 15, weight: .semibold))
+                                .font(.subheadline.weight(.semibold))
                             
                             if suggestedBudget > currentBudget {
                                 Text("(+\(Int((suggestedBudget - currentBudget) / currentBudget * 100))%)")
@@ -427,14 +426,14 @@ struct BudgetHistoryView: View {
     VStack(spacing: 20) {
         // Budget Input preview
         BudgetInputView(
-            currentBudget: .constant(2500.00),
+            currentBudget: .constant(2_500.00),
             onSave: {}
         )
         
         // Budget Status preview
         BudgetStatusView(
-            totalSpent: 1875.50,
-            currentBudget: 2500.00,
+            totalSpent: 1_875.50,
+            currentBudget: 2_500.00,
             daysRemainingInMonth: 14,
             budgetRemainingPerDay: 44.61
         )
@@ -442,10 +441,10 @@ struct BudgetHistoryView: View {
         // Budget Recommendations preview
         BudgetRecommendationsView(
             biggestExpenseCategory: (Category.food.categoryID, 450.50),
-            totalSpent: 1875.50,
-            currentBudget: 2500.00,
+            totalSpent: 1_875.50,
+            currentBudget: 2_500.00,
             daysRemainingInMonth: 14,
-            suggestedBudget: 2700.00
+            suggestedBudget: 2_700.00
         )
         .environmentObject(CategoryStore())
         
@@ -453,25 +452,25 @@ struct BudgetHistoryView: View {
         BudgetHistoryView(complianceData: [
             BudgetHistoryView.BudgetComplianceData(
                 month: 1,
-                year: 2025,
+                year: 2_025,
                 monthName: "Jan",
                 compliancePercent: 85.0,
                 color: .green
             ),
             BudgetHistoryView.BudgetComplianceData(
                 month: 2,
-                year: 2025,
+                year: 2_025,
                 monthName: "Feb",
                 compliancePercent: 95.0,
                 color: .blue
             ),
             BudgetHistoryView.BudgetComplianceData(
                 month: 3,
-                year: 2025,
+                year: 2_025,
                 monthName: "Mar",
                 compliancePercent: 120.0,
                 color: .red
-            )
+            ),
         ])
     }
     .padding()

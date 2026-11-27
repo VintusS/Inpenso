@@ -5,7 +5,6 @@
 //  Created by Dragomir Mindrescu on 27.04.2025.
 //
 
-
 import SwiftUI
 
 // Add Identifiable conformance to SpendingInsight from AnalyticsViewModel
@@ -55,7 +54,7 @@ struct KeyStatisticsView: View {
                                 .frame(width: 10, height: 10)
                             
                             Text(category.displayName)
-                                .font(.system(size: 18, weight: .bold))
+                                .font(.headline.weight(.bold))
                         }
                     }
                     
@@ -69,7 +68,7 @@ struct KeyStatisticsView: View {
                         }
                         
                         Text(amount, format: .currency(code: currencyCode))
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.headline.weight(.bold))
                     }
                 }
                 .padding()
@@ -88,13 +87,13 @@ struct KeyStatisticsView: View {
                             .foregroundColor(.secondary)
                         
                         Text(period)
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.headline.weight(.bold))
                     }
                     
                     Spacer()
                     
                     Image(systemName: "calendar.badge.clock")
-                        .font(.system(size: 24))
+                        .font(.title2)
                         .foregroundColor(.blue)
                 }
                 .padding()
@@ -137,7 +136,7 @@ struct InsightsCardView: View {
         HStack(spacing: 16) {
             // Icon
             Image(systemName: insight.icon)
-                .font(.system(size: 28))
+                .font(.title)
                 .foregroundColor(insight.color)
                 .frame(width: 36)
             
@@ -192,7 +191,7 @@ struct SpendingPatternView: View {
                                 .foregroundColor(.secondary)
                             
                             Text(analysis.title)
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.callout.weight(.semibold))
                             
                             Text(analysis.description)
                                 .font(.caption)
@@ -202,7 +201,7 @@ struct SpendingPatternView: View {
                         Spacer()
                         
                         Image(systemName: analysis.icon)
-                            .font(.system(size: 24))
+                            .font(.title2)
                             .foregroundColor(analysis.color)
                     }
                     .padding()
@@ -221,7 +220,7 @@ struct SpendingPatternView: View {
                                 .foregroundColor(.secondary)
                             
                             Text(analysis.title)
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.callout.weight(.semibold))
                             
                             Text(analysis.description)
                                 .font(.caption)
@@ -231,7 +230,7 @@ struct SpendingPatternView: View {
                         Spacer()
                         
                         Image(systemName: analysis.icon)
-                            .font(.system(size: 24))
+                            .font(.title2)
                             .foregroundColor(analysis.color)
                     }
                     .padding()
@@ -255,7 +254,7 @@ struct SpendingPatternView: View {
         // Key Statistics preview
         KeyStatisticsView(
             biggestExpenseCategory: (Category.food.categoryID, 450.50),
-            totalSpent: 1850.25,
+            totalSpent: 1_850.25,
             mostActiveSpendingPeriod: "Wednesday"
         )
         .environmentObject(CategoryStore())
@@ -275,7 +274,7 @@ struct SpendingPatternView: View {
                 description: "Your food spending has increased by 20% compared to last month",
                 icon: "fork.knife",
                 color: .red
-            )
+            ),
         ])
         
         // Patterns preview

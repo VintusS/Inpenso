@@ -34,8 +34,10 @@ struct MonthYearPicker: View {
     @Binding var selectedYear: Int
     private let monthYearList: [MonthYear]
     private let allowFutureMonths: Bool
-    var onMonthYearChanged: (() -> Void)? = nil
+    var onMonthYearChanged: (() -> Void)?
     
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .title2) private var accessiblePageHeight = 86
     @State private var selectedIndex: Int = 0
     
     init(
@@ -73,24 +75,25 @@ struct MonthYearPicker: View {
     
     var body: some View {
         HStack {
-            // MARK: - Left Arrow Button
-            if(selectedIndex > 0) {
-                Button(action: {
-                    if selectedIndex > 0 {
-                        selectedIndex -= 1
-                    }
-                }) {
-                    Image(systemName: "chevron.left")
-                        .font(.title2)
-                        .foregroundColor(.primary.opacity(selectedIndex > 0 ? 1 : 0))
-                }
-                .disabled(selectedIndex == 0)
+            Button {
+                selectedIndex -= 1
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.title2)
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
-            
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Previous Month")
+            .disabled(selectedIndex == 0)
+
             VStack(spacing: 0) {
                 TabView(selection: $selectedIndex) {
                     ForEach(Array(monthYearList.enumerated()), id: \.element.id) { index, monthYear in
-                        HStack(spacing: 8) {
+                        let layout = dynamicTypeSize.isAccessibilitySize
+                            ? AnyLayout(VStackLayout(spacing: 2))
+                            : AnyLayout(HStackLayout(spacing: 8))
+                        layout {
                             Text(Calendar.current.monthSymbols[monthYear.month - 1])
                                 .font(.title2)
                                 .fontWeight(.bold)
@@ -99,13 +102,14 @@ struct MonthYearPicker: View {
                                 .font(.title3)
                                 .foregroundColor(.secondary)
                         }
-                        .padding(.vertical, 10)
+                        .multilineTextAlignment(.center)
+                        .accessibilityElement(children: .combine)
                         .frame(maxWidth: .infinity)
                         .tag(index)
                     }
                 }
                 .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                .frame(height: 50)
+                .frame(height: dynamicTypeSize.isAccessibilitySize ? accessiblePageHeight : 50)
                 .onChange(of: selectedIndex) {
                     guard monthYearList.indices.contains(selectedIndex) else { return }
                     let monthYear = monthYearList[selectedIndex]
@@ -133,6 +137,7 @@ struct MonthYearPicker: View {
                     }
                 }
                 .padding(.bottom, 8)
+                .accessibilityHidden(true)
             }
             .onAppear {
                 // Synchronize the picker with the current selection
@@ -142,17 +147,21 @@ struct MonthYearPicker: View {
             }
             
             // MARK: - Right Arrow Button
-            Button(action: {
+            Button {
                 if selectedIndex < monthYearList.count - 1 {
                     selectedIndex += 1
                 }
-            }) {
+            } label: {
                 Image(systemName: "chevron.right")
                     .font(.title2)
-                    .foregroundColor(.primary.opacity(selectedIndex < monthYearList.count - 1 ? 1 : 0))
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
-            .disabled(selectedIndex == monthYearList.count - 1 )
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Next Month")
+            .disabled(selectedIndex >= monthYearList.count - 1)
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 
