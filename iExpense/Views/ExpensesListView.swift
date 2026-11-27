@@ -6,6 +6,7 @@
 import SwiftUI
 
 struct ExpensesListView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var settingsViewModel: SettingsViewModel
     @EnvironmentObject private var categoryStore: CategoryStore
     @EnvironmentObject private var walletsViewModel: WalletsViewModel
@@ -26,6 +27,8 @@ struct ExpensesListView: View {
     @State private var amountBounds = TransactionAmountBounds()
     @State private var selectedCategoryIDs: Set<String> = []
     @State private var isListLoaded = false
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private let monthHistoryLength = 61
 
@@ -51,7 +54,7 @@ struct ExpensesListView: View {
             case .all:
                 return true
             case .expenses:
-                return transaction.type == .expense
+                return transaction.type != .income
             case .incomes:
                 return transaction.type == .income
             }
@@ -72,7 +75,7 @@ struct ExpensesListView: View {
         var result = viewModel.expenses.filter { expense in
             guard amountBounds.contains(expense.price),
                   selectedTransactionFilter.matches(expense),
-                  selectedCategoryIDs.isEmpty || selectedCategoryIDs.contains(expense.categoryID)
+                  selectedCategoryIDs.isEmpty || selectedCategoryIDs.contains(categoryStore.category(for: expense).id)
             else { return false }
 
             if query.isEmpty {
@@ -101,8 +104,18 @@ struct ExpensesListView: View {
         return result
     }
 
+    /// Purchases minus refunds listed this month, floored at zero.
     private var totalSpent: Double {
-        filteredExpenses.filter { $0.type == .expense }.reduce(0) { $0 + $1.price }
+        max(0, filteredExpenses.reduce(0) { total, transaction in
+            switch transaction.type {
+            case .expense:
+                return total + transaction.price
+            case .refund:
+                return total - transaction.price
+            case .income:
+                return total
+            }
+        })
     }
 
     private var totalIncome: Double {
@@ -110,7 +123,7 @@ struct ExpensesListView: View {
     }
 
     private var netCashflow: Double {
-        totalIncome - totalSpent
+        filteredExpenses.netCashflow
     }
 
     private var groupedExpenses: [String: [Expense]] {
@@ -130,35 +143,31 @@ struct ExpensesListView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    if searchQuery.isEmpty {
-                        monthYearPicker
-                            .padding(.top, 8)
-                    } else {
-                        Text("All months")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 8)
-                    }
-
-                    if !filteredExpenses.isEmpty {
-                        summaryCard
-                            .padding(.horizontal)
-                            .padding(.top, 16)
-                            .padding(.bottom, 8)
-                    }
-
+                if dynamicTypeSize.isAccessibilitySize {
                     if filteredExpenses.isEmpty {
-                        emptyStateView
-                            .transition(.opacity)
-                            .animation(.easeInOut, value: filteredExpenses.isEmpty)
+                        ScrollView {
+                            transactionHeader
+                            emptyStateView
+                        }
                     } else {
                         transactionList
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        transactionHeader
+
+                        if filteredExpenses.isEmpty {
+                            emptyStateView
+                                .transition(.opacity)
+                                .animation(reduceMotion ? nil : .easeInOut, value: filteredExpenses.isEmpty)
+                        } else {
+                            transactionList
+                        }
                     }
                 }
             }
@@ -173,7 +182,8 @@ struct ExpensesListView: View {
                     Button {
                         selectedExpenseToEdit = Expense(title: "", price: 0, date: Date(), category: .food)
                     } label: {
-                        Image(systemName: "plus")
+                        Label("Add Transaction", systemImage: "plus")
+                            .labelStyle(.iconOnly)
                     }
                 }
             }
@@ -187,7 +197,7 @@ struct ExpensesListView: View {
                 }
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation {
+                    withAnimation(reduceMotion ? nil : .default) {
                         isListLoaded = true
                     }
                 }
@@ -220,9 +230,47 @@ struct ExpensesListView: View {
             .overlay(undoSnackbar, alignment: .bottom)
         }
     }
+}
+
+// MARK: - Sections
+
+extension ExpensesListView {
+    private var transactionHeader: some View {
+        VStack(spacing: 0) {
+            if searchQuery.isEmpty {
+                monthYearPicker
+            } else {
+                Text("All months")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            if !filteredExpenses.isEmpty {
+                TransactionSummaryCard(
+                    income: totalIncome,
+                    spent: totalSpent,
+                    net: netCashflow,
+                    itemCount: filteredExpenses.count,
+                    budget: analyticsViewModel.currentBudget,
+                    currencyCode: currencyCode
+                )
+                .padding(.horizontal)
+                .padding(.top, 16)
+                .padding(.bottom, 8)
+            }
+        }
+        .padding(.top, 8)
+    }
 
     private var transactionList: some View {
         List {
+            if dynamicTypeSize.isAccessibilitySize {
+                transactionHeader
+                    .listRowInsets(.init())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+
             ForEach(visibleCategoryIDs, id: \.self) { categoryID in
                 let category = categoryStore.category(for: categoryID)
 
@@ -242,11 +290,12 @@ struct ExpensesListView: View {
                 } header: {
                     HStack {
                         Image(systemName: category.iconName)
-                            .foregroundColor(.white)
+                            .foregroundStyle(category.color.badgeForeground)
                             .font(.caption)
                             .frame(width: 28, height: 28)
                             .background(category.color)
                             .clipShape(Circle())
+                            .accessibilityHidden(true)
 
                         Text(category.displayName)
                             .font(.headline)
@@ -254,7 +303,7 @@ struct ExpensesListView: View {
                         Spacer()
 
                         let categoryTotal = (groupedExpenses[categoryID] ?? []).reduce(0) { total, transaction in
-                            total + (transaction.type == .income ? transaction.price : -transaction.price)
+                            total + transaction.signedAmount
                         }
                         Text(categoryTotal, format: .currency(code: currencyCode))
                             .font(.subheadline)
@@ -265,8 +314,8 @@ struct ExpensesListView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .opacity(isListLoaded ? 1 : 0)
-        .animation(.easeIn(duration: 0.3), value: isListLoaded)
+        .opacity(reduceMotion || isListLoaded ? 1 : 0)
+        .animation(reduceMotion ? nil : .easeIn(duration: 0.3), value: isListLoaded)
     }
 
     private func syncSelectedCategoryIDs(oldCategoryIDs: [String], newCategoryIDs: [String]) {
@@ -285,8 +334,9 @@ struct ExpensesListView: View {
                     }
                 }
             } label: {
-                Label("Sort", systemImage: "arrow.up.arrow.down")
+                Label("Sort Transactions", systemImage: "arrow.up.arrow.down")
             }
+            .accessibilityLabel("Sort Transactions")
 
             Menu {
                 Picker("Type", selection: $selectedTransactionFilter) {
@@ -295,19 +345,21 @@ struct ExpensesListView: View {
                     }
                 }
             } label: {
-                Label("Type", systemImage: "line.3.horizontal.decrease")
+                Label("Transaction Type", systemImage: "line.3.horizontal.decrease")
             }
+            .accessibilityLabel("Transaction Type")
 
             Button {
                 showingFilterSheet = true
             } label: {
                 Label(
-                    "Filter",
+                    "Filter Transactions",
                     systemImage: amountBounds.isActive || selectedCategoryIDs.count < filterCategoryIDs.count
                         ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle"
                 )
             }
         }
+        .labelStyle(.iconOnly)
     }
 
     private var monthYearPicker: some View {
@@ -319,98 +371,10 @@ struct ExpensesListView: View {
         .padding(.horizontal)
     }
 
-    private var summaryCard: some View {
-        VStack(spacing: 16) {
-            HStack(spacing: 12) {
-                summaryMetric(title: "Income", amount: totalIncome, color: .green)
-                Divider()
-                summaryMetric(title: "Spent", amount: totalSpent, color: .primary)
-                Divider()
-                summaryMetric(title: "Net", amount: netCashflow, color: netCashflow >= 0 ? .green : .red)
-                Divider()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("Items")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-
-                    Text("\(filteredExpenses.count)")
-                        .font(.title3)
-                        .fontWeight(.bold)
-                }
-            }
-
-            if analyticsViewModel.currentBudget > 0 {
-                budgetProgress
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
-        )
-    }
-
-    private func summaryMetric(title: String, amount: Double, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            Text(amount, format: .currency(code: currencyCode))
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var budgetProgress: some View {
-        VStack(spacing: 6) {
-            HStack {
-                Text("Monthly Budget")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                Text(totalSpent, format: .currency(code: currencyCode))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Text("of")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Text(analyticsViewModel.currentBudget, format: .currency(code: currencyCode))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-
-            let progress = min(1.0, totalSpent / analyticsViewModel.currentBudget)
-            let progressColor: Color = progress < 0.75 ? .blue : (progress < 0.9 ? .orange : .red)
-
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color(.systemGray5))
-                        .frame(height: 6)
-
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(progressColor)
-                        .frame(width: geometry.size.width * CGFloat(progress), height: 6)
-                }
-            }
-            .frame(height: 6)
-        }
-    }
-
     private var emptyStateView: some View {
         VStack(spacing: 20) {
             Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 70))
+                .font(.largeTitle)
                 .foregroundColor(.gray.opacity(0.6))
                 .padding()
 
@@ -457,21 +421,10 @@ struct ExpensesListView: View {
                 Button {
                     selectedExpenseToEdit = Expense(title: "", price: 0, date: Date(), category: .food)
                 } label: {
-                    let addExpenseLabel: some View =
-                        Label("Add Transaction", systemImage: "plus")
-                            .foregroundColor(.white)
-                            .padding(.vertical, 10)
-                            .padding(.horizontal, 20)
-
-                    if #available(iOS 26.0, *) {
-                        addExpenseLabel
-                            .glassEffect(.regular.tint(.blue).interactive())
-                    } else {
-                        addExpenseLabel
-                            .background(Color.accentColor)
-                            .cornerRadius(10)
-                    }
+                    Label("Add Transaction", systemImage: "plus")
+                        .frame(minHeight: 44)
                 }
+                .buttonStyle(.borderedProminent)
                 .padding(.top, 8)
             }
         }
@@ -486,28 +439,28 @@ struct ExpensesListView: View {
                 HStack {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
+                        .accessibilityHidden(true)
 
                     Text("Transaction deleted")
-                        .foregroundColor(.white)
 
                     Spacer()
 
                     Button("Undo") {
                         undoDelete()
                     }
-                    .foregroundColor(.yellow)
+                    .foregroundStyle(Color.accentColor)
                     .fontWeight(.bold)
                 }
                 .padding()
                 .background(
                     RoundedRectangle(cornerRadius: 16)
-                        .fill(Color.black.opacity(0.85))
-                        .shadow(color: Color.black.opacity(0.2), radius: 5, x: 0, y: 2)
+                        .fill(Color(.secondarySystemGroupedBackground))
+                        .shadow(color: Color(.label).opacity(0.15), radius: 5, x: 0, y: 2)
                 )
                 .padding(.horizontal)
                 .padding(.bottom, 8)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-                .animation(.spring(), value: showUndoSnackbar)
+                .transition(reduceMotion ? .identity : .move(edge: .bottom).combined(with: .opacity))
+                .animation(reduceMotion ? nil : .spring(), value: showUndoSnackbar)
             }
         }
     }
@@ -535,275 +488,6 @@ struct ExpensesListView: View {
         viewModel.restoreExpenses(recentlyDeletedExpenses)
         recentlyDeletedExpenses.removeAll()
         showUndoSnackbar = false
-    }
-}
-
-struct ExpenseRowView: View {
-    @EnvironmentObject private var categoryStore: CategoryStore
-
-    let expense: Expense
-    let currencyCode: String
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .center, spacing: 2) {
-                Text(dayNumber)
-                    .font(.system(size: 18, weight: .semibold))
-
-                Text(monthShort)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .textCase(.uppercase)
-            }
-            .frame(width: 40)
-            .padding(.vertical, 8)
-            .background(Color(.tertiarySystemBackground))
-            .cornerRadius(8)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(expense.title)
-                    .font(.headline)
-                    .lineLimit(1)
-
-                HStack(spacing: 6) {
-                    Image(systemName: category.iconName)
-                        .font(.caption2)
-                        .foregroundColor(category.color)
-
-                    Text(category.displayName)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Text("•")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    Text(formattedDate)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-
-            Spacer()
-
-            Text(amountText)
-                .font(.system(.headline, design: .rounded))
-                .fontWeight(.bold)
-                .foregroundColor(expense.type.amountColor)
-        }
-        .padding(.vertical, 6)
-    }
-
-    private var category: FinanceCategory {
-        categoryStore.category(for: expense)
-    }
-
-    private var amountText: String {
-        let formatted = expense.price.formatted(.currency(code: currencyCode))
-        return expense.type == .income ? "+\(formatted)" : formatted
-    }
-
-    private var dayNumber: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "d"
-        return formatter.string(from: expense.date)
-    }
-
-    private var monthShort: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM"
-        return formatter.string(from: expense.date)
-    }
-
-    private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "E, d MMM yyyy"
-        return formatter.string(from: expense.date)
-    }
-}
-
-private struct TransactionAmountBounds {
-    var minimum: Double?
-    var maximum: Double?
-
-    var isActive: Bool { minimum != nil || maximum != nil }
-
-    func contains(_ amount: Double) -> Bool {
-        amount >= (minimum ?? -.infinity) && amount <= (maximum ?? .infinity)
-    }
-}
-
-private struct TransactionFiltersView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.locale) private var locale
-
-    @Binding var selectedCategoryIDs: Set<String>
-    @Binding var amountBounds: TransactionAmountBounds
-    let categories: [FinanceCategory]
-    let currencyCode: String
-
-    @State private var tempSelectedCategoryIDs: Set<String>
-    @State private var minimum = ""
-    @State private var maximum = ""
-
-    init(
-        selectedCategoryIDs: Binding<Set<String>>,
-        amountBounds: Binding<TransactionAmountBounds>,
-        categories: [FinanceCategory],
-        currencyCode: String
-    ) {
-        self._selectedCategoryIDs = selectedCategoryIDs
-        self._amountBounds = amountBounds
-        self.categories = categories
-        self.currencyCode = currencyCode
-        self._tempSelectedCategoryIDs = State(initialValue: selectedCategoryIDs.wrappedValue)
-    }
-
-    private var amountInput: AmountInput {
-        AmountInput(fractionDigits: currencyFractionDigits(for: currencyCode), locale: locale)
-    }
-
-    private var parsedBounds: TransactionAmountBounds {
-        TransactionAmountBounds(minimum: amountInput.value(of: minimum), maximum: amountInput.value(of: maximum))
-    }
-
-    private var amountError: String? {
-        let bounds = parsedBounds
-        if (!minimum.isEmpty && bounds.minimum == nil) || (!maximum.isEmpty && bounds.maximum == nil) {
-            return "Enter a valid amount."
-        }
-        if let low = bounds.minimum, let high = bounds.maximum, low > high {
-            return "The maximum must be at least the minimum."
-        }
-        return nil
-    }
-
-    private func amountField(_ label: String, text: Binding<String>) -> some View {
-        LabeledContent(label) {
-            AmountTextField(placeholder: "Any", raw: text, input: amountInput)
-                .multilineTextAlignment(.trailing)
-                .accessibilityLabel(label)
-        }
-    }
-
-    var body: some View {
-        NavigationView {
-            List {
-                Section {
-                    amountField("Minimum", text: $minimum)
-                    amountField("Maximum", text: $maximum)
-                } header: {
-                    Text("Amount (\(currencyCode))")
-                } footer: {
-                    if let amountError {
-                        Text(amountError).foregroundStyle(.red)
-                    } else {
-                        Text("Leave either amount blank for no limit.")
-                    }
-                }
-
-                Section {
-                    ForEach(categories) { category in
-                        HStack {
-                            Image(systemName: category.iconName)
-                                .foregroundColor(.white)
-                                .font(.caption)
-                                .frame(width: 28, height: 28)
-                                .background(category.color)
-                                .clipShape(Circle())
-
-                            Text(category.displayName)
-                                .font(.body)
-
-                            Spacer()
-
-                            if tempSelectedCategoryIDs.contains(category.id) {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if tempSelectedCategoryIDs.contains(category.id) {
-                                if tempSelectedCategoryIDs.count > 1 {
-                                    tempSelectedCategoryIDs.remove(category.id)
-                                }
-                            } else {
-                                tempSelectedCategoryIDs.insert(category.id)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Categories")
-                } footer: {
-                    Text("Select which categories to display")
-                }
-            }
-            .onAppear {
-                minimum = amountBounds.minimum.map(amountInput.bindingText) ?? ""
-                maximum = amountBounds.maximum.map(amountInput.bindingText) ?? ""
-            }
-            .navigationTitle("Filter")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Apply") {
-                        selectedCategoryIDs = tempSelectedCategoryIDs
-                        amountBounds = parsedBounds
-                        dismiss()
-                    }
-                    .disabled(amountError != nil)
-                }
-            }
-        }
-    }
-}
-
-struct ExpenseRowContent: View {
-    let expense: Expense
-    let currencyCode: String
-    let onEdit: () -> Void
-    /// Nil for rows that can't be deleted on their own, such as transfer fees.
-    let onDelete: (() -> Void)?
-
-    private var editLabel: String { onDelete == nil ? "Edit Transfer" : "Edit" }
-
-    var body: some View {
-        ExpenseRowView(expense: expense, currencyCode: currencyCode)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                onEdit()
-            }
-            .contextMenu {
-                Button(action: onEdit) {
-                    Label(editLabel, systemImage: "pencil")
-                }
-
-                if let onDelete {
-                    Button(role: .destructive, action: onDelete) {
-                        Label("Delete", systemImage: "trash")
-                    }
-                }
-            }
-            .swipeActions(edge: .leading) {
-                if let onDelete {
-                    Button(role: .destructive, action: onDelete) {
-                        Label("Delete", systemImage: "trash")
-                    }
-                }
-            }
-            .swipeActions(edge: .trailing) {
-                Button(action: onEdit) {
-                    Label(editLabel, systemImage: "pencil")
-                }
-                .tint(.blue)
-            }
     }
 }
 
