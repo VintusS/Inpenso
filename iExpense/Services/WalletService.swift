@@ -55,6 +55,15 @@ enum WalletService {
         notify()
     }
 
+    static func unarchiveWallet(_ id: UUID) throws {
+        try StorageService.updateLedger { ledger in
+            guard let index = ledger.wallets.firstIndex(where: { $0.id == id })
+            else { throw WalletError.unknownWallet }
+            ledger.wallets[index].isArchived = false
+        }
+        notify()
+    }
+
     static func loadTransfers() -> [Transfer] {
         StorageService.loadLedger()?.transfers ?? []
     }

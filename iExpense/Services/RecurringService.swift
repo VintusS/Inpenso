@@ -71,13 +71,15 @@ enum RecurringService {
     // MARK: - Actions
 
     /// Adds the occurrences as transactions. Already-posted ones are ignored.
-    static func post(_ occurrences: [RecurringOccurrence]) {
-        let fallbackWallet = WalletService.defaultWalletID()
-        StorageService.updateExpenses { expenses in
-            let existing = Set(expenses.map(\.id))
+    /// A rule whose wallet was archived or deleted posts to the default wallet instead.
+    static func post(_ occurrences: [RecurringOccurrence]) throws {
+        try StorageService.updateLedger { ledger in
+            let existing = Set(ledger.transactions.map(\.id))
+            let activeWallets = Set(ledger.wallets.filter { !$0.isArchived }.map(\.id))
             for occurrence in occurrences where !existing.contains(occurrence.id) {
                 let rule = occurrence.rule
-                expenses.append(Expense(
+                let walletID = rule.walletID.flatMap { activeWallets.contains($0) ? $0 : nil } ?? ledger.defaultWalletID
+                ledger.transactions.append(Expense(
                     id: occurrence.id,
                     title: rule.title,
                     price: rule.amount,
@@ -86,7 +88,7 @@ enum RecurringService {
                     type: rule.type,
                     categoryID: rule.categoryID,
                     notes: rule.notes,
-                    walletID: rule.walletID ?? fallbackWallet
+                    walletID: walletID
                 ))
             }
         }

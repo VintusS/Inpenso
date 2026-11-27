@@ -36,8 +36,15 @@ final class RecurringViewModel: ObservableObject {
         refresh()
     }
 
+    /// Set when posting fails, for the due card to show in an alert.
+    @Published var postError: String?
+
     func post(_ occurrences: [RecurringOccurrence]) {
-        RecurringService.post(occurrences)
+        do {
+            try RecurringService.post(occurrences)
+        } catch {
+            postError = (error as? LocalizedError)?.errorDescription ?? "Couldn't add the recurring transactions."
+        }
         refresh()
     }
 

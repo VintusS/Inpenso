@@ -11,6 +11,7 @@ import Charts
 struct HomeView: View {
     @EnvironmentObject private var settingsViewModel: SettingsViewModel
     @EnvironmentObject private var categoryStore: CategoryStore
+    @EnvironmentObject private var walletsViewModel: WalletsViewModel
 
     @ObservedObject var viewModel: ExpenseViewModel
     @ObservedObject var analyticsViewModel: AnalyticsViewModel
@@ -65,7 +66,11 @@ struct HomeView: View {
                 AddExpenseView(viewModel: viewModel)
             }
             .sheet(item: $selectedExpenseToEdit) { expense in
-                EditExpenseView(viewModel: viewModel, expense: expense)
+                if let transfer = walletsViewModel.transfers.first(where: { $0.feeExpenseID == expense.id }) {
+                    TransferSheet(walletsViewModel: walletsViewModel, transfer: transfer)
+                } else {
+                    EditExpenseView(viewModel: viewModel, expense: expense)
+                }
             }
             .onAppear {
                 // Animate cards when view appears with slight delay between each

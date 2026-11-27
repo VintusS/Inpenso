@@ -79,6 +79,7 @@ struct MainTabView: View {
         }
         .onChange(of: viewModel.expenses) {
             analyticsViewModel.updateExpenses(viewModel.expenses)
+            walletsViewModel.refresh()
         }
     }
 }

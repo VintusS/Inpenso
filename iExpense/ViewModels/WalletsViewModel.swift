@@ -105,9 +105,7 @@ final class WalletsViewModel: ObservableObject {
     }
 
     func unarchive(_ wallet: Wallet) throws {
-        var restored = wallet
-        restored.isArchived = false
-        try WalletService.saveWallet(restored)
+        try WalletService.unarchiveWallet(wallet.id)
         refresh()
     }
 

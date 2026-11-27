@@ -8,6 +8,7 @@ import SwiftUI
 struct ExpensesListView: View {
     @EnvironmentObject private var settingsViewModel: SettingsViewModel
     @EnvironmentObject private var categoryStore: CategoryStore
+    @EnvironmentObject private var walletsViewModel: WalletsViewModel
 
     @ObservedObject var viewModel: ExpenseViewModel
     @StateObject private var analyticsViewModel = AnalyticsViewModel(expenses: [])
@@ -200,6 +201,8 @@ struct ExpensesListView: View {
             .sheet(item: $selectedExpenseToEdit) { expenseToEdit in
                 if expenseToEdit.title.isEmpty {
                     AddExpenseView(viewModel: viewModel)
+                } else if let transfer = walletsViewModel.transfers.first(where: { $0.feeExpenseID == expenseToEdit.id }) {
+                    TransferSheet(walletsViewModel: walletsViewModel, transfer: transfer)
                 } else {
                     EditExpenseView(viewModel: viewModel, expense: expenseToEdit)
                         .id(expenseToEdit.id)
@@ -231,7 +234,7 @@ struct ExpensesListView: View {
                             onEdit: {
                                 selectedExpenseToEdit = expense
                             },
-                            onDelete: {
+                            onDelete: viewModel.isTransferFee(expense) ? nil : {
                                 deleteExpenseByID(expense)
                             }
                         )
@@ -766,7 +769,10 @@ struct ExpenseRowContent: View {
     let expense: Expense
     let currencyCode: String
     let onEdit: () -> Void
-    let onDelete: () -> Void
+    /// Nil for rows that can't be deleted on their own, such as transfer fees.
+    let onDelete: (() -> Void)?
+
+    private var editLabel: String { onDelete == nil ? "Edit Transfer" : "Edit" }
 
     var body: some View {
         ExpenseRowView(expense: expense, currencyCode: currencyCode)
@@ -776,21 +782,25 @@ struct ExpenseRowContent: View {
             }
             .contextMenu {
                 Button(action: onEdit) {
-                    Label("Edit", systemImage: "pencil")
+                    Label(editLabel, systemImage: "pencil")
                 }
 
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash")
+                if let onDelete {
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete", systemImage: "trash")
+                    }
                 }
             }
             .swipeActions(edge: .leading) {
-                Button(role: .destructive, action: onDelete) {
-                    Label("Delete", systemImage: "trash")
+                if let onDelete {
+                    Button(role: .destructive, action: onDelete) {
+                        Label("Delete", systemImage: "trash")
+                    }
                 }
             }
             .swipeActions(edge: .trailing) {
                 Button(action: onEdit) {
-                    Label("Edit", systemImage: "pencil")
+                    Label(editLabel, systemImage: "pencil")
                 }
                 .tint(.blue)
             }
@@ -801,4 +811,5 @@ struct ExpenseRowContent: View {
     ExpensesListView(viewModel: ExpenseViewModel())
         .environmentObject(SettingsViewModel())
         .environmentObject(CategoryStore())
+        .environmentObject(WalletsViewModel())
 }

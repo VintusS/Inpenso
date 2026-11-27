@@ -292,27 +292,34 @@ struct AddExpenseView: View {
             return
         }
         
-        // Show success animation
-        withAnimation {
-            animateSuccess = true
-        }
-        
         let selectedCategory = categoryStore.category(for: selectedCategoryID)
         let legacyCategory = Category.category(from: selectedCategory.id) ?? .others
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // Add the transaction with all fields
-        _ = viewModel.addExpense(
-            title: title,
-            price: priceValue,
-            date: selectedDate,
-            category: legacyCategory,
-            type: transactionType,
-            categoryID: selectedCategory.id,
-            notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
-            walletID: walletID
-        )
-        
+        // Keep the form open with the user's input if the save fails.
+        do {
+            _ = try viewModel.addExpense(
+                title: title,
+                price: priceValue,
+                date: selectedDate,
+                category: legacyCategory,
+                type: transactionType,
+                categoryID: selectedCategory.id,
+                notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+                walletID: walletID
+            )
+        } catch WalletError.unknownWallet {
+            showValidationAlert("That wallet is no longer available. Choose another wallet.")
+            return
+        } catch {
+            showValidationAlert("Couldn't save the transaction. Please try again.")
+            return
+        }
+
+        withAnimation {
+            animateSuccess = true
+        }
+
         // Trigger success haptic
         HapticFeedback.success()
         

@@ -65,6 +65,14 @@ struct RecurringDueCard: View {
                 .fill(Color(.secondarySystemBackground))
                 .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
         )
+        .alert("Recurring", isPresented: Binding(
+            get: { recurringViewModel.postError != nil },
+            set: { if !$0 { recurringViewModel.postError = nil } }
+        )) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(recurringViewModel.postError ?? "")
+        }
     }
 
     private func row(for occurrence: RecurringOccurrence) -> some View {

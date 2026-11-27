@@ -12,6 +12,7 @@ import UIKit
 @MainActor
 class ExpenseViewModel: ObservableObject {
     @Published private(set) var expenses: [Expense] = []
+    @Published private(set) var transferFeeIDs: Set<UUID> = []
     
     init() {
         loadExpenses()
@@ -32,7 +33,7 @@ class ExpenseViewModel: ObservableObject {
         categoryID: String? = nil,
         notes: String? = nil,
         walletID: UUID? = nil
-    ) -> Expense {
+    ) throws -> Expense {
         var newExpense = Expense(
             title: title,
             price: price,
@@ -43,18 +44,14 @@ class ExpenseViewModel: ObservableObject {
             notes: notes,
             walletID: walletID
         )
-        do {
-            try StorageService.updateLedger { ledger in
-                let id = walletID ?? ledger.defaultWalletID
-                guard ledger.wallets.contains(where: { $0.id == id && !$0.isArchived })
-                else { throw WalletError.unknownWallet }
-                newExpense.walletID = id
-                ledger.transactions.append(newExpense)
-            }
-        } catch {
-            NSLog("Unable to add transaction: %@", error.localizedDescription)
+        defer { loadExpenses() }
+        try StorageService.updateLedger { ledger in
+            let id = walletID ?? ledger.defaultWalletID
+            guard ledger.wallets.contains(where: { $0.id == id && !$0.isArchived })
+            else { throw WalletError.unknownWallet }
+            newExpense.walletID = id
+            ledger.transactions.append(newExpense)
         }
-        loadExpenses()
         return newExpense
     }
 
@@ -72,15 +69,24 @@ class ExpenseViewModel: ObservableObject {
     }
 
     func loadExpenses() {
-        expenses = StorageService.loadExpenses()
+        let ledger = StorageService.loadLedger()
+        expenses = ledger?.transactions ?? StorageService.loadExpenses()
+        transferFeeIDs = Set(ledger?.transfers.compactMap(\.feeExpenseID) ?? [])
+    }
+
+    /// Fee rows are generated from their transfer on every write, so they are
+    /// changed through the transfer, never directly.
+    func isTransferFee(_ expense: Expense) -> Bool {
+        transferFeeIDs.contains(expense.id)
     }
 
     func deleteExpenses(_ expenses: [Expense]) {
-        let ids = Set(expenses.map(\.id))
+        let ids = Set(expenses.map(\.id)).subtracting(transferFeeIDs)
         changeExpenses { $0.removeAll { ids.contains($0.id) } }
     }
 
     func removeExpense(id: UUID) -> Expense? {
+        guard !transferFeeIDs.contains(id) else { return nil }
         let removed = StorageService.updateExpenses { expenses -> Expense? in
             guard let index = expenses.firstIndex(where: { $0.id == id }) else { return nil }
             return expenses.remove(at: index)
@@ -90,6 +96,7 @@ class ExpenseViewModel: ObservableObject {
     }
 
     func updateExpense(id: UUID, _ update: (inout Expense) -> Void) {
+        guard !transferFeeIDs.contains(id) else { return }
         changeExpenses { expenses in
             guard let index = expenses.firstIndex(where: { $0.id == id }) else { return }
             update(&expenses[index])
