@@ -55,10 +55,16 @@ struct TextFormField: View {
 
 /// Currency input field with formatting
 struct CurrencyFormField: View {
+    @Environment(\.locale) private var locale
     let label: String
     @Binding var amount: String
     var currencySymbol: String
+    var fractionDigits: Int = 2
     var clearAction: (() -> Void)? = nil
+
+    private var input: AmountInput {
+        AmountInput(fractionDigits: fractionDigits, locale: locale)
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -74,15 +80,11 @@ struct CurrencyFormField: View {
                     .font(.title3)
                     .fontWeight(.medium)
                 
-                TextField("0.00", text: $amount)
+                AmountTextField(placeholder: input.placeholder, raw: $amount, input: input)
                     .font(.title2)
                     .fontWeight(.semibold)
-                    .keyboardType(.decimalPad)
                     .multilineTextAlignment(.leading)
-                    .onChange(of: amount) { 
-                        amount = formatCurrencyInput(amount)
-                    }
-                
+
                 Spacer()
                 
                 // Clear button
@@ -105,30 +107,34 @@ struct CurrencyFormField: View {
             .cornerRadius(10)
         }
     }
-    
-    /// Format the input to ensure it's a valid currency value
-    private func formatCurrencyInput(_ input: String) -> String {
-        // Remove any non-numeric characters except for a single decimal point
-        var formattedInput = input.replacingOccurrences(of: ",", with: ".")
-        
-        // Allow only one decimal point
-        let components = formattedInput.components(separatedBy: ".")
-        if components.count > 2 {
-            formattedInput = components[0] + "." + components[1]
-        }
-        
-        // Limit to two decimal places
-        if let decimalIndex = formattedInput.firstIndex(of: ".") {
-            let decimalPosition = formattedInput.distance(from: formattedInput.startIndex, to: decimalIndex)
-            let maxLength = decimalPosition + 3 // Allow up to 2 decimal places
-            
-            if formattedInput.count > maxLength {
-                let endIndex = formattedInput.index(formattedInput.startIndex, offsetBy: maxLength)
-                formattedInput = String(formattedInput[..<endIndex])
+}
+
+/// Text field for money amounts. `raw` holds ungrouped text with "." as the decimal mark;
+/// the field shows it grouped for the locale (e.g. "125.000") and regroups as the user types.
+///
+/// SwiftUI does not push a computed binding's reformatted value back into a field that is
+/// being edited, so the shown text lives in local state and is rewritten after each change.
+struct AmountTextField: View {
+    let placeholder: String
+    @Binding var raw: String
+    let input: AmountInput
+    @State private var shown = ""
+
+    var body: some View {
+        TextField(placeholder, text: $shown)
+            .keyboardType(input.fractionDigits == 0 ? .numberPad : .decimalPad)
+            .onAppear { shown = input.display(raw) }
+            .onChange(of: shown) { _, newValue in
+                let updated = input.updating(raw, with: newValue)
+                if updated != raw { raw = updated }
+                let formatted = input.display(updated)
+                if formatted != newValue { shown = formatted }
             }
-        }
-        
-        return formattedInput
+            .onChange(of: raw) { _, newValue in
+                // External changes, e.g. the clear button or a reset.
+                let formatted = input.display(newValue)
+                if formatted != shown { shown = formatted }
+            }
     }
 }
 

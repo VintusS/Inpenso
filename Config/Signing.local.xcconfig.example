@@ -1,0 +1,6 @@
+// Copy to Signing.local.xcconfig (gitignored) and fill in your own values.
+// The bundle ID and app group must be unique to your Apple developer team.
+
+INPENSO_DEVELOPMENT_TEAM = YOURTEAMID
+INPENSO_BUNDLE_ID = com.example.Inpenso
+INPENSO_APP_GROUP = group.com.example.Inpenso

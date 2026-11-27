@@ -32,15 +32,16 @@ struct AddExpenseSiriIntent: AppIntent {
     }
 
     func perform() async throws -> some IntentResult {
-        var expenses = StorageService.loadExpenses()
-        let newExpense = Expense(
+        var newExpense = Expense(
             title: title,
             price: price,
             date: Date(),
             category: category
         )
-        expenses.append(newExpense)
-        StorageService.saveExpenses(expenses)
+        try StorageService.updateLedger { ledger in
+            newExpense.walletID = ledger.defaultWalletID
+            ledger.transactions.append(newExpense)
+        }
 
         return .result()
     }

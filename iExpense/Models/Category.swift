@@ -45,6 +45,7 @@ enum Category: String, CaseIterable, Codable, AppEnum {
     case subscriptions
     case healthcare
     case education
+    case work
     case others
 
     var displayName: String {
@@ -59,6 +60,7 @@ enum Category: String, CaseIterable, Codable, AppEnum {
         case .subscriptions: return "Subscriptions"
         case .healthcare: return "Healthcare"
         case .education: return "Education"
+        case .work: return "Work"
         case .others: return "Others"
         }
     }
@@ -76,6 +78,7 @@ enum Category: String, CaseIterable, Codable, AppEnum {
         .subscriptions: "Subscriptions",
         .healthcare: "Healthcare",
         .education: "Education",
+        .work: "Work",
         .others: "Others"
     ]
 }
@@ -112,6 +115,8 @@ extension Category {
             return "heart.fill"
         case .education:
             return "book.fill"
+        case .work:
+            return "briefcase.fill"
         case .others:
             return "ellipsis"
         }
@@ -139,6 +144,8 @@ extension Category {
             return "#FF3B30"
         case .education:
             return "#5856D6"
+        case .work:
+            return "#A2845E"
         case .others:
             return "#8E8E93"
         }
@@ -166,6 +173,8 @@ extension Category {
             return .red
         case .education:
             return .indigo
+        case .work:
+            return .brown
         case .others:
             return .gray
         }

@@ -43,12 +43,14 @@ let availableCurrencies: [(code: String, symbol: String, name: String)] = [
     ("CHF", "Fr", "Swiss Franc"),
     ("CNY", "¥", "Chinese Yuan"),
     ("INR", "₹", "Indian Rupee"),
-    ("RUB", "₽", "Russian Ruble")
+    ("RUB", "₽", "Russian Ruble"),
+    ("IDR", "Rp", "Indonesian Rupiah")
 ]
 
 @MainActor
 class SettingsViewModel: ObservableObject {
-    @Published var selectedCurrency: String = "USD" {
+    @Published private(set) var isCurrencyLocked = true
+    @Published private(set) var selectedCurrency: String = "USD" {
         didSet {
             // Save to standard UserDefaults
             UserDefaults.standard.set(selectedCurrency, forKey: "selectedCurrency")
@@ -83,30 +85,14 @@ class SettingsViewModel: ObservableObject {
         }
     }
     
-    @Published var exportFileName: String = "iExpense_export_\(Date().formatted(.dateTime.year().month().day()))"
-    
     init() {
-        // Get the shared UserDefaults for settings
         let sharedDefaults = UserDefaults(suiteName: StorageService.appGroupID)
-        
-        // Load currency setting - try shared first, then standard 
-        if let savedCurrency = sharedDefaults?.string(forKey: "selectedCurrency") {
-            self.selectedCurrency = savedCurrency
-        } else if let savedCurrency = UserDefaults.standard.string(forKey: "selectedCurrency") {
-            self.selectedCurrency = savedCurrency
-            
-            // Sync this value to shared defaults
-            sharedDefaults?.set(savedCurrency, forKey: "selectedCurrency")
-            sharedDefaults?.synchronize()
-        } else {
-            self.selectedCurrency = "USD"
-            
-            // Set default in both places
-            UserDefaults.standard.set("USD", forKey: "selectedCurrency")
-            sharedDefaults?.set("USD", forKey: "selectedCurrency")
-            sharedDefaults?.synchronize()
-        }
-        
+        let ledger = StorageService.loadLedger()
+        self.selectedCurrency = ledger?.currency
+            ?? sharedDefaults?.string(forKey: "selectedCurrency")
+            ?? UserDefaults.standard.string(forKey: "selectedCurrency") ?? "USD"
+        self.isCurrencyLocked = ledger?.hasActivity ?? true
+
         let savedCategory = UserDefaults.standard.string(forKey: "defaultCategory")
         self.defaultCategory = Category(rawValue: savedCategory ?? "food") ?? .food
         self.defaultCategoryID = UserDefaults.standard.string(forKey: "defaultCategoryID") ?? self.defaultCategory.categoryID
@@ -115,46 +101,52 @@ class SettingsViewModel: ObservableObject {
         self.selectedTheme = AppTheme(rawValue: savedTheme ?? "system") ?? .system
     }
     
-    func exportData() -> URL? {
-        let expenses = StorageService.loadExpenses()
-        
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            let jsonData = try encoder.encode(expenses)
-            
-            let fileManager = FileManager.default
-            let documentDirectory = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first!
-            print("DEBUG: exported file \(exportFileName).json")
-            let fileURL = documentDirectory.appendingPathComponent("\(exportFileName).json")
-            
-            try jsonData.write(to: fileURL)
-            return fileURL
-        } catch {
-            return nil
+    func exportBackup() throws -> URL {
+        try BackupService.writeBackupFile()
+    }
+
+    func previewRestore(from url: URL) throws -> RestorePreview {
+        let data = try Data(contentsOf: url)
+        let (backup, isLegacy) = try BackupService.readBackup(from: data, currentCurrencyCode: selectedCurrency)
+        return BackupService.preview(backup, isLegacy: isLegacy, currentCurrencyCode: selectedCurrency)
+    }
+
+    func refreshLedgerCurrency() {
+        let ledger = StorageService.loadLedger()
+        isCurrencyLocked = ledger?.hasActivity ?? true
+        if let currency = ledger?.currency, selectedCurrency != currency {
+            selectedCurrency = currency
         }
     }
-    
-    func importData(from url: URL) -> Bool {
-        do {
-            let data = try Data(contentsOf: url)
-            let decoder = JSONDecoder()
-            let expenses = try decoder.decode([Expense].self, from: data)
-            
-            StorageService.saveExpenses(expenses)
-            return true
-        } catch {
-            return false
+
+    func changeCurrency(to currency: String) throws {
+        defer { refreshLedgerCurrency() }
+        guard currency != selectedCurrency else { return }
+        try StorageService.updateLedger { ledger in
+            guard !ledger.hasActivity else { throw CurrencyChangeError.ledgerHasActivity }
+            ledger.currency = currency
         }
     }
-    
+
+    func applyRestore(_ preview: RestorePreview, mode: RestoreMode) throws {
+        try BackupService.restore(preview.backup, mode: mode)
+        refreshLedgerCurrency()
+    }
+
     func resetAllData() {
-        StorageService.saveExpenses([])
-        StorageService.saveBudgets([:])
+        do {
+            try StorageService.clearExpenses()
+            StorageService.saveBudgets([:])
+            refreshLedgerCurrency()
+            NotificationCenter.default.post(name: .inpensoDataDidChange, object: nil)
+        } catch {
+            NSLog("Unable to reset ledger: %@", error.localizedDescription)
+        }
     }
-    
+
     // Static method to get app-wide settings without needing to initialize
     static func getAppCurrency() -> String {
+        if let currency = StorageService.loadLedger()?.currency { return currency }
         // First try to get from shared defaults
         let sharedDefaults = UserDefaults(suiteName: StorageService.appGroupID)
         
@@ -174,9 +166,17 @@ class SettingsViewModel: ObservableObject {
 
 // Function to get currency symbol - doesn't use main actor
 func getSettingsCurrencySymbol() -> String {
-    let code = UserDefaults.standard.string(forKey: "selectedCurrency") ?? "USD"
+    let code = StorageService.loadLedger()?.currency ?? UserDefaults.standard.string(forKey: "selectedCurrency") ?? "USD"
     if let currency = availableCurrencies.first(where: { $0.code == code }) {
         return currency.symbol
     }
     return "$" // Default fallback
+}
+
+private enum CurrencyChangeError: LocalizedError {
+    case ledgerHasActivity
+
+    var errorDescription: String? {
+        "Currency is locked while the ledger contains transactions or transfers."
+    }
 }

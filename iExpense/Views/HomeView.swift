@@ -11,9 +11,11 @@ import Charts
 struct HomeView: View {
     @EnvironmentObject private var settingsViewModel: SettingsViewModel
     @EnvironmentObject private var categoryStore: CategoryStore
+    @EnvironmentObject private var walletsViewModel: WalletsViewModel
 
     @ObservedObject var viewModel: ExpenseViewModel
     @ObservedObject var analyticsViewModel: AnalyticsViewModel
+    @ObservedObject var recurringViewModel: RecurringViewModel
     @State private var showingAddExpense = false
     @State private var showRecentExpenses = true
     @State private var animateCards = false
@@ -32,6 +34,9 @@ struct HomeView: View {
                 VStack(spacing: 20) {
                     headerCard
                         .padding(.top, 10)
+                    if !recurringViewModel.dueOccurrences.isEmpty || recurringViewModel.rules.isEmpty {
+                        RecurringDueCard(recurringViewModel: recurringViewModel)
+                    }
                     recentSpendingCard
                     categoryBreakdownCard
                     recentExpensesSection
@@ -61,7 +66,11 @@ struct HomeView: View {
                 AddExpenseView(viewModel: viewModel)
             }
             .sheet(item: $selectedExpenseToEdit) { expense in
-                EditExpenseView(viewModel: viewModel, expense: expense)
+                if let transfer = walletsViewModel.transfers.first(where: { $0.feeExpenseID == expense.id }) {
+                    TransferSheet(walletsViewModel: walletsViewModel, transfer: transfer)
+                } else {
+                    EditExpenseView(viewModel: viewModel, expense: expense)
+                }
             }
             .onAppear {
                 // Animate cards when view appears with slight delay between each
@@ -468,8 +477,10 @@ struct HomeView: View {
 #Preview {
     HomeView(
         viewModel: ExpenseViewModel(),
-        analyticsViewModel: AnalyticsViewModel(expenses: [])
+        analyticsViewModel: AnalyticsViewModel(expenses: []),
+        recurringViewModel: RecurringViewModel()
     )
     .environmentObject(SettingsViewModel())
+        .environmentObject(WalletsViewModel())
     .environmentObject(CategoryStore())
 }

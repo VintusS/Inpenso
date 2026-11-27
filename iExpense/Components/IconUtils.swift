@@ -32,6 +32,8 @@ enum IconUtils {
             return "heart.fill"
         case .education:
             return "book.fill"
+        case .work:
+            return "briefcase.fill"
         case .others:
             return "ellipsis"
         }

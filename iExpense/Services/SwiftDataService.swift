@@ -31,10 +31,7 @@ struct SwiftDataService {
             // Let SwiftDataManager handle SwiftData operations
             try? SwiftDataManager.shared.saveExpense(expense, using: context)
             
-            // Also save to UserDefaults for backward compatibility
-            var expenses = StorageService.loadExpenses()
-            expenses.append(expense)
-            StorageService.saveExpenses(expenses)
+            StorageService.updateExpenses { $0.append(expense) }
         }
     }
     
@@ -64,12 +61,12 @@ struct SwiftDataService {
                 
                 try context.save()
                 
-                // Also clear UserDefaults for backward compatibility
-                StorageService.clearExpenses()
+                // Also clear the shared transaction and budget stores
+                try StorageService.clearExpenses()
                 StorageService.saveBudgets([:])
             } catch {
                 print("Failed to clear data: \(error)")
             }
         }
     }
-} 
+}

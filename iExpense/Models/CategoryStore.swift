@@ -35,6 +35,15 @@ final class CategoryStore: ObservableObject {
         }
     }
 
+    /// Re-reads the catalog from storage, e.g. after a backup restore.
+    func reload() {
+        if let savedCatalogState = StorageService.loadCategoryCatalogState() {
+            catalogState = Self.normalized(savedCatalogState)
+        } else {
+            catalogState = Self.initialState(customCategories: StorageService.loadCustomCategories())
+        }
+    }
+
     func category(for id: String) -> FinanceCategory {
         categoryMap[id] ?? FinanceCategory.fallback
     }

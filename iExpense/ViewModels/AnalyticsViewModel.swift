@@ -95,6 +95,8 @@ class AnalyticsViewModel: ObservableObject {
     @Published var selectedYear: Int = Calendar.current.component(.year, from: Date())
 
     @Published var monthlyBudgets: [String: Double] = [:]
+    /// Standing monthly limit per category ID.
+    @Published var categoryBudgets: [String: Double] = CategoryBudgetService.load()
     @Published var currentBudget: Double = 0.0
     @Published var budgetRemainingPerDay: Double = 0.0
     @Published var daysRemainingInMonth: Int = 0
@@ -105,6 +107,17 @@ class AnalyticsViewModel: ObservableObject {
         self.expenses = expenses
         self.monthlyBudgets = StorageService.loadBudgets()
         calculateAnalytics()
+    }
+
+    func reloadBudgets() {
+        monthlyBudgets = StorageService.loadBudgets()
+        categoryBudgets = CategoryBudgetService.load()
+        calculateAnalytics()
+    }
+
+    func saveCategoryBudgets(_ budgets: [String: Double]) {
+        CategoryBudgetService.save(budgets)
+        categoryBudgets = CategoryBudgetService.load()
     }
 
     func updateExpenses(_ expenses: [Expense]) {
@@ -136,8 +149,8 @@ class AnalyticsViewModel: ObservableObject {
         calculateMonthlyTrends()
         calculateCategoryTrends()
 
-        let key = budgetKey(forMonth: selectedMonth, year: selectedYear)
-        currentBudget = monthlyBudgets[key] ?? 0.0
+        // A month without its own budget keeps the most recent earlier one.
+        currentBudget = StorageService.effectiveBudget(month: selectedMonth, year: selectedYear, in: monthlyBudgets)
         calculateDaysRemainingAndBudget()
         generateInsights()
     }

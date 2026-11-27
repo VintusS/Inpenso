@@ -1,0 +1,11 @@
+// Signing identity and shared IDs for Inpenso.
+//
+// These are the upstream defaults. To build on your own device, copy
+// Signing.local.xcconfig.example to Signing.local.xcconfig (gitignored) and
+// set your own team, bundle ID and app group there. Never commit that file.
+
+INPENSO_DEVELOPMENT_TEAM = K9YT824399
+INPENSO_BUNDLE_ID = com.dragomir.Inpenso
+INPENSO_APP_GROUP = group.com.vintuss.Inpenso
+
+#include? "Signing.local.xcconfig"
