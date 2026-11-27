@@ -9,6 +9,7 @@ import SwiftUI
 import Charts
 
 struct HomeView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var settingsViewModel: SettingsViewModel
     @EnvironmentObject private var categoryStore: CategoryStore
     @EnvironmentObject private var walletsViewModel: WalletsViewModel
@@ -19,7 +20,7 @@ struct HomeView: View {
     @State private var showingAddExpense = false
     @State private var showRecentExpenses = true
     @State private var animateCards = false
-    @State private var selectedExpenseToEdit: Expense? = nil
+    @State private var selectedExpenseToEdit: Expense?
     @State private var showingEditExpense = false
     
     private let recentDaysToShow = 7
@@ -28,12 +29,18 @@ struct HomeView: View {
         settingsViewModel.selectedCurrency
     }
     
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
                     headerCard
                         .padding(.top, 10)
+                    let creditDues = walletsViewModel.upcomingDues()
+                    if !creditDues.isEmpty {
+                        DueSoonCard(dues: creditDues)
+                    }
                     if !recurringViewModel.dueOccurrences.isEmpty || recurringViewModel.rules.isEmpty {
                         RecurringDueCard(recurringViewModel: recurringViewModel)
                     }
@@ -47,11 +54,12 @@ struct HomeView: View {
             .navigationTitle("Home")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
+                    Button {
                         showingAddExpense = true
-                    }) {
+                    } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "plus")
+                                .accessibilityHidden(true)
                             Text("Add")
                                 .font(.callout)
                                 .fontWeight(.semibold)
@@ -74,15 +82,19 @@ struct HomeView: View {
             }
             .onAppear {
                 // Animate cards when view appears with slight delay between each
-                withAnimation(.easeOut(duration: 0.5).delay(0.1)) {
+                withAnimation(reduceMotion ? nil : .easeOut(duration: 0.5).delay(0.1)) {
                     animateCards = true
                 }
             }
         }
     }
-    
+}
+
+// MARK: - Sections
+
+extension HomeView {
     // MARK: - Header Card
-    
+
     private var headerCard: some View {
         VStack(spacing: 16) {
             // Total display
@@ -92,25 +104,24 @@ struct HomeView: View {
                     .foregroundColor(.secondary)
                 
                 Text(analyticsViewModel.netCashflow, format: .currency(code: currencyCode))
-                    .font(.system(size: 42, weight: .bold, design: .rounded))
+                    .font(.system(.largeTitle, design: .rounded).weight(.bold))
                     .foregroundColor(analyticsViewModel.netCashflow >= 0 ? .green : .red)
-                    .minimumScaleFactor(0.6)
-                    .lineLimit(1)
             }
 
-            HStack {
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(spacing: 12))
+                : AnyLayout(HStackLayout(spacing: 12))
+            layout {
                 cashflowMetric(title: "Income", amount: analyticsViewModel.totalIncome, color: .green)
-                Divider()
                 cashflowMetric(title: "Spent", amount: analyticsViewModel.totalSpent, color: .primary)
-                Divider()
-                cashflowMetric(title: "Net", amount: analyticsViewModel.netCashflow, color: analyticsViewModel.netCashflow >= 0 ? .green : .red)
             }
-            
+
             // Budget information if available
             if analyticsViewModel.currentBudget > 0 {
                 VStack(spacing: 8) {
                     // Progress bar
-                    let progress = min(1.0, analyticsViewModel.totalSpent / analyticsViewModel.currentBudget)
+                    let usage = analyticsViewModel.totalSpent / analyticsViewModel.currentBudget
+                    let progress = min(1, usage)
                     let progressColor: Color = progress < 0.75 ? .blue : (progress < 0.9 ? .orange : .red)
                     
                     GeometryReader { geometry in
@@ -129,16 +140,23 @@ struct HomeView: View {
                     .frame(height: 8)
                     
                     // Budget info
-                    HStack {
-                        Text("\(Int(progress * 100))% of budget")
+                    layout {
+                        Text("\(usage.formatted(.percent.precision(.fractionLength(0)))) of budget")
                             .font(.caption)
                             .foregroundColor(.secondary)
                         
-                        Spacer()
-                        
-                        Text("\(analyticsViewModel.daysRemainingInMonth) days left")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                        if !dynamicTypeSize.isAccessibilitySize { Spacer() }
+
+                        if analyticsViewModel.totalSpent > analyticsViewModel.currentBudget {
+                            let overage = analyticsViewModel.totalSpent - analyticsViewModel.currentBudget
+                            Text("\(overage.formatted(.currency(code: currencyCode))) over")
+                                .font(.caption)
+                                .foregroundStyle(.red)
+                        } else {
+                            Text("\(analyticsViewModel.daysRemainingInMonth) days left")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -147,10 +165,10 @@ struct HomeView: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                .shadow(color: Color(.label).opacity(0.05), radius: 10, x: 0, y: 5)
         )
-        .offset(y: animateCards ? 0 : -50)
-        .opacity(animateCards ? 1 : 0)
+        .offset(y: reduceMotion || animateCards ? 0 : -50)
+        .opacity(reduceMotion || animateCards ? 1 : 0)
     }
     
     // MARK: - Recent Spending Card
@@ -237,10 +255,10 @@ struct HomeView: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                .shadow(color: Color(.label).opacity(0.05), radius: 10, x: 0, y: 5)
         )
-        .offset(y: animateCards ? 0 : -30)
-        .opacity(animateCards ? 1 : 0)
+        .offset(y: reduceMotion || animateCards ? 0 : -30)
+        .opacity(reduceMotion || animateCards ? 1 : 0)
     }
     
     // Helper function to get recent spending data
@@ -291,8 +309,8 @@ struct HomeView: View {
                                     let categoryDetails = categoryStore.category(for: category)
 
                                     Image(systemName: categoryDetails.iconName)
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.white)
+                                    .font(.callout)
+                                    .foregroundStyle(categoryDetails.color.badgeForeground)
                                     .frame(width: 30, height: 30)
                                     .background(categoryDetails.color)
                                     .cornerRadius(8)
@@ -329,10 +347,10 @@ struct HomeView: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                .shadow(color: Color(.label).opacity(0.05), radius: 10, x: 0, y: 5)
         )
-        .offset(y: animateCards ? 0 : -20)
-        .opacity(animateCards ? 1 : 0)
+        .offset(y: reduceMotion || animateCards ? 0 : -20)
+        .opacity(reduceMotion || animateCards ? 1 : 0)
     }
     
     // MARK: - Recent Expenses Section
@@ -345,11 +363,11 @@ struct HomeView: View {
                 
                 Spacer()
                 
-                Button(action: {
-                    withAnimation {
+                Button {
+                    withAnimation(reduceMotion ? nil : .default) {
                         showRecentExpenses.toggle()
                     }
-                }) {
+                } label: {
                     Label(showRecentExpenses ? "Hide " : "Show", systemImage: showRecentExpenses ? "chevron.up" : "chevron.down")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -377,8 +395,8 @@ struct HomeView: View {
                                     let category = categoryStore.category(for: expense)
 
                                     Image(systemName: category.iconName)
-                                    .font(.system(size: 14))
-                                    .foregroundColor(.white)
+                                    .font(.subheadline)
+                                    .foregroundStyle(category.color.badgeForeground)
                                     .frame(width: 28, height: 28)
                                     .background(category.color)
                                     .cornerRadius(6)
@@ -413,30 +431,15 @@ struct HomeView: View {
                     }
                     
                     // View all button
-                    Button(action: {
+                    Button {
                         // Use NotificationCenter to notify MainTabView to switch to expenses tab
                         NotificationCenter.default.post(name: NSNotification.Name("SwitchToExpensesTab"), object: nil)
-                    }) {
-                        let viewAllExpensesButton: some View = Text("View All Transactions")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                        
-                        if #available(iOS 26.0, *) {
-                            viewAllExpensesButton
-                                .foregroundColor(.white)
-                                .glassEffect(.regular.tint(.blue).interactive())
-                        } else {
-                            viewAllExpensesButton
-                                .foregroundColor(.blue)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.accentColor, lineWidth: 1.5)
-                                )
-                                .padding(.top, 8)
-                        }
+                    } label: {
+                        Text("View All Transactions")
+                            .font(.subheadline.weight(.medium))
+                            .frame(maxWidth: .infinity, minHeight: 44)
                     }
+                    .buttonStyle(.bordered)
                 }
             }
         }
@@ -444,10 +447,10 @@ struct HomeView: View {
         .background(
             RoundedRectangle(cornerRadius: 20)
                 .fill(Color(.secondarySystemBackground))
-                .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 5)
+                .shadow(color: Color(.label).opacity(0.05), radius: 10, x: 0, y: 5)
         )
-        .offset(y: animateCards ? 0 : -10)
-        .opacity(animateCards ? 1 : 0)
+        .offset(y: reduceMotion || animateCards ? 0 : -10)
+        .opacity(reduceMotion || animateCards ? 1 : 0)
     }
     
     // MARK: - Helper Methods
@@ -462,15 +465,13 @@ struct HomeView: View {
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
     }
 
     private func amountText(for expense: Expense) -> String {
         let formatted = expense.price.formatted(.currency(code: currencyCode))
-        return expense.type == .income ? "+\(formatted)" : formatted
+        return expense.type.isInflow ? "+\(formatted)" : formatted
     }
 }
 

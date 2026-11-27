@@ -11,6 +11,9 @@ import UIKit
 
 @MainActor
 class ExpenseViewModel: ObservableObject {
+    // swiftlint:disable:next large_tuple
+    typealias InstalmentOptions = (months: Int, monthlyFee: Double, payFromWalletID: UUID?)
+
     @Published private(set) var expenses: [Expense] = []
     @Published private(set) var transferFeeIDs: Set<UUID> = []
     
@@ -32,9 +35,10 @@ class ExpenseViewModel: ObservableObject {
         type: TransactionType = .expense,
         categoryID: String? = nil,
         notes: String? = nil,
-        walletID: UUID? = nil
+        walletID: UUID? = nil,
+        refundOfID: UUID? = nil
     ) throws -> Expense {
-        var newExpense = Expense(
+        try recordExpense(Expense(
             title: title,
             price: price,
             date: date,
@@ -42,15 +46,60 @@ class ExpenseViewModel: ObservableObject {
             type: type,
             categoryID: categoryID,
             notes: notes,
-            walletID: walletID
-        )
+            walletID: walletID,
+            refundOfID: type == .refund ? refundOfID : nil
+        ))
+    }
+
+    func addCreditPurchase(
+        _ expense: Expense,
+        instalment: InstalmentOptions?
+    ) throws {
+        _ = try recordExpense(expense, requiresCredit: true, instalment: instalment)
+        NotificationCenter.default.post(name: .inpensoDataDidChange, object: nil)
+    }
+
+    func payInstalment(_ plan: InstalmentPlan, amount: Double, from walletID: UUID, date: Date) throws {
+        defer { loadExpenses() }
+        try WalletService.payInstalment(plan, amount: amount, from: walletID, date: date)
+    }
+
+    private func recordExpense(
+        _ expense: Expense,
+        requiresCredit: Bool = false,
+        instalment: InstalmentOptions? = nil
+    ) throws -> Expense {
+        var newExpense = expense
         defer { loadExpenses() }
         try StorageService.updateLedger { ledger in
-            let id = walletID ?? ledger.defaultWalletID
-            guard ledger.wallets.contains(where: { $0.id == id && !$0.isArchived })
+            let id = expense.walletID ?? ledger.defaultWalletID
+            guard let wallet = ledger.wallets.first(where: { $0.id == id && !$0.isArchived }),
+                  !requiresCredit || wallet.kind.isCredit
             else { throw WalletError.unknownWallet }
+            if requiresCredit {
+                guard expense.type == .expense, expense.price.isFinite, expense.price > 0,
+                      wallet.openingDate.map({ $0 <= expense.date }) ?? true
+                else { throw WalletError.invalidAmount }
+                if ledger.transactions.contains(where: { $0.id == expense.id }) { return }
+            }
             newExpense.walletID = id
             ledger.transactions.append(newExpense)
+            if let instalment {
+                guard instalment.months >= 1 else { throw WalletError.invalidAmount }
+                let calendar = Calendar.current
+                guard let nextMonth = calendar.date(byAdding: .month, value: 1, to: expense.date)
+                else { throw WalletError.invalidAmount }
+                let firstDueDate = wallet.dueDay.flatMap { creditDate(day: $0, inMonthOf: nextMonth) } ?? nextMonth
+                let plan = InstalmentPlan(
+                    purchaseExpenseID: expense.id, creditWalletID: id, payFromWalletID: instalment.payFromWalletID,
+                    principal: expense.price, months: instalment.months,
+                    monthlyAmount: expense.price / Double(instalment.months), monthlyFee: instalment.monthlyFee,
+                    firstDueDate: firstDueDate, title: expense.title,
+                    scheduledDay: wallet.dueDay ?? calendar.component(.day, from: expense.date)
+                )
+                if ledger.instalmentPlans == nil { ledger.instalmentPlans = [] }
+                ledger.instalmentPlans?.append(plan)
+            }
         }
         return newExpense
     }

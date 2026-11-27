@@ -8,6 +8,8 @@
 import SwiftUI
 
 struct AddExpenseView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.locale) private var locale
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
@@ -24,6 +26,8 @@ struct AddExpenseView: View {
     @State private var selectedDate: Date = Date()
     @State private var notes: String = ""
     @State private var walletID: UUID? = WalletService.defaultWalletID()
+    @State private var refundOfID: UUID?
+    @State private var instalment = InstalmentChoice()
     
     // UI States
     @State private var showDatePicker = false
@@ -51,7 +55,7 @@ struct AddExpenseView: View {
     }
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color(.systemGroupedBackground)
                     .ignoresSafeArea()
@@ -65,7 +69,7 @@ struct AddExpenseView: View {
                         CardView(title: "Category") {
                             CategoryGrid(
                                 selectedCategoryID: $selectedCategoryID,
-                                categories: categoryStore.allCategories
+                                categories: categoryStore.categoriesForPicker(kind: transactionType.categoryKind)
                             )
                                 .padding(.horizontal)
                         }
@@ -81,14 +85,7 @@ struct AddExpenseView: View {
                         notesCard
                         
                         // Save Button
-                        if #available(iOS 26.0, *) {
-                            saveButton
-                                .glassEffect(isFormValid() ? .regular.tint(.blue).interactive() : .regular.tint(.gray))
-                        } else {
-                            saveButton
-                                .background(isFormValid() ? Color.accentColor : Color.gray)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
+                        saveButton
                     }
                     .padding(.horizontal)
                     .padding(.top, 10)
@@ -120,12 +117,12 @@ struct AddExpenseView: View {
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                withAnimation {
+                withAnimation(reduceMotion ? nil : .default) {
                     keyboardVisible = true
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-                withAnimation {
+                withAnimation(reduceMotion ? nil : .default) {
                     keyboardVisible = false
                 }
             }
@@ -133,13 +130,25 @@ struct AddExpenseView: View {
                 Button("OK", role: .cancel) { }
             }
             .onAppear {
-                selectedCategoryID = categoryStore.preferredCategoryID(for: selectedCategoryID)
+                selectedCategoryID = categoryStore.preferredCategoryID(for: selectedCategoryID, kind: transactionType.categoryKind)
+            }
+            .onChange(of: transactionType) { _, newType in
+                selectedCategoryID = categoryStore.preferredCategoryID(for: selectedCategoryID, kind: newType.categoryKind)
+            }
+            .onChange(of: refundOfID) { _, purchaseID in
+                if let purchase = viewModel.expenses.first(where: { $0.id == purchaseID }) {
+                    selectedCategoryID = purchase.categoryID
+                }
             }
         }
     }
-    
+}
+
+// MARK: - Sections
+
+extension AddExpenseView {
     // MARK: - Main Data Card
-    
+
     private var mainDataCard: some View {
         CardView(title: "Transaction Details", showDivider: true) {
             VStack(spacing: 16) {
@@ -155,7 +164,7 @@ struct AddExpenseView: View {
                 TextFormField(
                     label: "Title",
                     text: $title,
-                    placeholder: transactionType == .expense ? "Expense title" : "Income title",
+                    placeholder: transactionType.titlePlaceholder,
                     leadingIcon: "pencil"
                 )
                 .padding(.horizontal)
@@ -172,7 +181,30 @@ struct AddExpenseView: View {
 
                 WalletFormField(selection: $walletID, wallets: walletsViewModel.wallets)
                     .padding(.horizontal)
+                    .padding(.bottom, transactionType == .refund ? 0 : 8)
+
+                if showsInstalmentFields {
+                    InstalmentFields(
+                        choice: $instalment,
+                        principal: amountInput.value(of: price),
+                        input: amountInput,
+                        currency: settingsViewModel.selectedCurrency,
+                        payFromWallets: walletsViewModel.activeWallets.filter { !$0.kind.isCredit }
+                    )
+                    .padding(.horizontal)
                     .padding(.bottom, 8)
+                    .transition(.opacity)
+                }
+
+                if transactionType == .refund {
+                    RefundLinkField(
+                        selection: $refundOfID,
+                        purchases: RefundLinkField.candidates(in: viewModel.expenses, refundDate: selectedDate, linkedID: refundOfID),
+                        currencyCode: settingsViewModel.selectedCurrency
+                    )
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+                }
             }
         }
     }
@@ -204,49 +236,23 @@ struct AddExpenseView: View {
     
     private var saveButton: some View {
         Button(action: saveExpense) {
-            HStack {
-                Spacer()
-                Text("Save Transaction")
-                Spacer()
-            }
-            .padding()
-            .foregroundColor(.white)
-            
-//            HStack {
-//                Spacer()
-//                Text("Save Expense")
-//                    .fontWeight(.bold)
-//                Spacer()
-//            }
-//            .padding()
-//            .background(isFormValid() ? Color.accentColor : Color.gray)
-//            .foregroundColor(.white)
-//            .cornerRadius(16)
+            Text("Save Transaction")
+                .frame(maxWidth: .infinity, minHeight: 44)
         }
+        .buttonStyle(.borderedProminent)
         .disabled(!isFormValid())
     }
-    
-//    let saveButton: some View =
-//    
-//    if #available(iOS 26.0, *) {
-//        saveButton
-//            .glassEffect(.regular.tint(.blue).interactive())
-//    } else {
-//        saveButton
-//            .background(Color.blue.opacity(0.8))
-//            .cornerRadius(12)
-//    }
-    
+
     // MARK: - Success Overlay
     
     private var successOverlay: some View {
         ZStack {
-            Color.black.opacity(0.4)
+            Color(.systemBackground).opacity(reduceTransparency ? 1 : 0.6)
                 .ignoresSafeArea()
             
             VStack(spacing: 20) {
                 Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 80))
+                    .font(.largeTitle)
                     .foregroundColor(.green)
                 
                 Text("Transaction Added!")
@@ -257,19 +263,23 @@ struct AddExpenseView: View {
             .padding(30)
             .background(
                 RoundedRectangle(cornerRadius: 20)
-                    .fill(Color(.systemBackground).opacity(0.8))
-                    .blur(radius: 0.5)
+                    .fill(Color(.secondarySystemGroupedBackground))
             )
-            .scaleEffect(animateSuccess ? 1.0 : 0.5)
+            .scaleEffect(reduceMotion || animateSuccess ? 1 : 0.5)
             .opacity(animateSuccess ? 1.0 : 0)
-            .animation(.spring(), value: animateSuccess)
+            .animation(reduceMotion ? nil : .spring(), value: animateSuccess)
         }
     }
     
     // MARK: - Helper Methods
     
+    /// Instalments only apply to a purchase on a credit card or paylater wallet.
+    private var showsInstalmentFields: Bool {
+        transactionType == .expense && walletsViewModel.wallet(for: walletID)?.kind.isCredit == true
+    }
+
     private func isFormValid() -> Bool {
-        return !title.isEmpty && !price.isEmpty
+        !title.isEmpty && !price.isEmpty
     }
     
     private func saveExpense() {
@@ -298,16 +308,39 @@ struct AddExpenseView: View {
 
         // Keep the form open with the user's input if the save fails.
         do {
-            _ = try viewModel.addExpense(
-                title: title,
-                price: priceValue,
-                date: selectedDate,
-                category: legacyCategory,
-                type: transactionType,
-                categoryID: selectedCategory.id,
-                notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
-                walletID: walletID
-            )
+            if showsInstalmentFields && instalment.isOn {
+                let purchase = Expense(
+                    title: title,
+                    price: priceValue,
+                    date: selectedDate,
+                    category: legacyCategory,
+                    type: .expense,
+                    categoryID: selectedCategory.id,
+                    notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+                    walletID: walletID
+                )
+                try viewModel.addCreditPurchase(
+                    purchase,
+                    instalment: (
+                        months: instalment.months,
+                        monthlyFee: amountInput.value(of: instalment.monthlyFeeText) ?? 0,
+                        payFromWalletID: instalment.payFromWalletID
+                    )
+                )
+                walletsViewModel.refresh()
+            } else {
+                _ = try viewModel.addExpense(
+                    title: title,
+                    price: priceValue,
+                    date: selectedDate,
+                    category: legacyCategory,
+                    type: transactionType,
+                    categoryID: selectedCategory.id,
+                    notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+                    walletID: walletID,
+                    refundOfID: refundOfID
+                )
+            }
         } catch WalletError.unknownWallet {
             showValidationAlert("That wallet is no longer available. Choose another wallet.")
             return
@@ -316,7 +349,7 @@ struct AddExpenseView: View {
             return
         }
 
-        withAnimation {
+        withAnimation(reduceMotion ? nil : .default) {
             animateSuccess = true
         }
 

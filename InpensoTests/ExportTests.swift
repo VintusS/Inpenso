@@ -2,7 +2,7 @@ import XCTest
 @testable import Inpenso
 
 final class ExportTests: XCTestCase {
-    func testVersionTwoBackupRoundTrip() throws {
+    func testCurrentBackupRoundTrip() throws {
         var ledger = TestFixtures.ledger()
         var transfer = TestFixtures.transfer(in: ledger)
         transfer.feeExpenseID = UUID()
@@ -17,7 +17,7 @@ final class ExportTests: XCTestCase {
         )
         let decoded = try BackupService.readBackup(from: BackupService.encode(backup), currentCurrencyCode: "USD")
         XCTAssertFalse(decoded.isLegacy)
-        XCTAssertEqual(decoded.backup.formatVersion, 2)
+        XCTAssertEqual(decoded.backup.formatVersion, InpensoBackup.currentFormatVersion)
         XCTAssertEqual(decoded.backup.exportedAt, backup.exportedAt)
         XCTAssertEqual(decoded.backup.currencyCode, "IDR")
         XCTAssertEqual(decoded.backup.transactions, backup.transactions)

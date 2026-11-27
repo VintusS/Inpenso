@@ -22,12 +22,18 @@ struct TransferSheet: View {
     @State private var errorMessage: String?
     @State private var showingDeleteConfirmation = false
     @State private var didLoad = false
+    private let prefillAmount: Double?
+    private let customTitle: String?
 
-    init(walletsViewModel: WalletsViewModel, transfer: Transfer?, fromWalletID: UUID? = nil) {
+    /// `toWalletID`, `amount` and `title` prefill a new transfer, e.g. Pay Bill on a credit wallet.
+    init(walletsViewModel: WalletsViewModel, transfer: Transfer?, fromWalletID: UUID? = nil,
+         toWalletID: UUID? = nil, amount: Double? = nil, title: String? = nil) {
         self.walletsViewModel = walletsViewModel
         self.existing = transfer
+        self.prefillAmount = amount
+        self.customTitle = title
         _fromWalletID = State(initialValue: transfer?.fromWalletID ?? fromWalletID)
-        _toWalletID = State(initialValue: transfer?.toWalletID)
+        _toWalletID = State(initialValue: transfer?.toWalletID ?? toWalletID)
         _date = State(initialValue: transfer?.date ?? Date())
         _note = State(initialValue: transfer?.note ?? "")
     }
@@ -39,6 +45,8 @@ struct TransferSheet: View {
     }
 
     private var amount: Double? { input.value(of: amountText) }
+
+    private var paysCredit: Bool { walletsViewModel.wallet(for: toWalletID)?.kind.isCredit == true }
     private var fee: Double { input.value(of: feeText) ?? 0 }
 
     private var validationMessage: String? {
@@ -49,7 +57,7 @@ struct TransferSheet: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section {
                     WalletPicker(title: "From", selection: $fromWalletID, wallets: walletsViewModel.wallets, including: existing?.fromWalletID)
@@ -83,9 +91,15 @@ struct TransferSheet: View {
                     DatePicker("Date", selection: $date, displayedComponents: .date)
                     TextField("Note (optional)", text: $note)
                 } footer: {
-                    Text(fee > 0
-                         ? "The fee is taken from the source wallet and counted as spending. The transfer itself isn't."
-                         : "Transfers don't count as income or spending.")
+                    if paysCredit {
+                        Text(fee > 0
+                             ? "Paying the bill lowers what you owe and isn't spending. The fee or interest is, under Fees & Interest."
+                             : "Paying the bill lowers what you owe. The purchases already counted as spending, so this doesn't.")
+                    } else {
+                        Text(fee > 0
+                             ? "The fee is taken from the source wallet and counted as spending. The transfer itself isn't."
+                             : "Transfers don't count as income or spending.")
+                    }
                 }
 
                 if existing != nil {
@@ -96,7 +110,7 @@ struct TransferSheet: View {
                     }
                 }
             }
-            .navigationTitle(existing == nil ? "Transfer" : "Edit Transfer")
+            .navigationTitle(existing == nil ? (customTitle ?? "Transfer") : "Edit Transfer")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -134,8 +148,16 @@ struct TransferSheet: View {
             }
         } else {
             let active = walletsViewModel.activeWallets
-            if fromWalletID == nil { fromWalletID = walletsViewModel.defaultWalletID ?? active.first?.id }
+            if fromWalletID == nil {
+                // Paying a card from another card isn't a bill payment, so default to a cash or bank wallet.
+                let sources = paysCredit ? active.filter { !$0.kind.isCredit } : active
+                let preferred = walletsViewModel.defaultWalletID.flatMap { id in sources.first { $0.id == id } }
+                fromWalletID = preferred?.id ?? sources.first { $0.id != toWalletID }?.id
+            }
             if toWalletID == nil { toWalletID = active.first { $0.id != fromWalletID }?.id }
+            if let prefillAmount, prefillAmount > 0 {
+                amountText = input.bindingText(for: prefillAmount)
+            }
         }
     }
 

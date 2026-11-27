@@ -7,7 +7,8 @@ import Foundation
 
 /// A full, versioned snapshot of the user's data.
 struct InpensoBackup: Codable {
-    static let currentFormatVersion = 2
+    /// 4 adds instalment plans and linked repayments.
+    static let currentFormatVersion = 4
 
     var formatVersion: Int
     var exportedAt: Date
@@ -23,6 +24,7 @@ struct InpensoBackup: Codable {
     var wallets: [Wallet]?
     var transfers: [Transfer]?
     var defaultWalletID: UUID?
+    var instalmentPlans: [InstalmentPlan]?
 }
 
 enum RestoreMode {
@@ -83,7 +85,8 @@ enum BackupService {
             categoryBudgets: CategoryBudgetService.load(),
             wallets: ledger.wallets,
             transfers: ledger.transfers,
-            defaultWalletID: ledger.defaultWalletID
+            defaultWalletID: ledger.defaultWalletID,
+            instalmentPlans: ledger.instalmentPlans ?? []
         )
     }
 
@@ -119,7 +122,7 @@ enum BackupService {
             guard let backup = try? decoder.decode(InpensoBackup.self, from: data) else {
                 throw BackupError.unreadableFile
             }
-            if backup.formatVersion == 2 {
+            if backup.formatVersion >= 2 {
                 var ledger = try makeLedger(from: backup)
                 do { try ledger.prepareForWrite() } catch { throw BackupError.unreadableFile }
             }
@@ -177,37 +180,55 @@ enum BackupService {
     @discardableResult
     static func restore(_ backup: InpensoBackup, mode: RestoreMode, importWalletID: UUID? = nil) throws -> String? {
         let currency = try StorageService.updateLedger { ledger in
-            if mode == .merge, backup.formatVersion > 0, backup.currencyCode != ledger.currency {
-                throw BackupError.currencyMismatch
-            }
-            if backup.formatVersion >= 2 {
-                let incoming = try makeLedger(from: backup)
-                if mode == .replace { ledger = incoming } else { merge(incoming, into: &ledger) }
-            } else {
-                let targetID = importWalletID ?? ledger.defaultWalletID
-                guard var target = ledger.wallets.first(where: { $0.id == targetID && !$0.isArchived })
-                else { throw WalletError.unknownWallet }
-                let imported = uniqueByID(backup.transactions).map {
-                    var expense = $0
-                    expense.walletID = targetID
-                    return expense
-                }
-                if mode == .replace {
-                    target.openingBalance = 0
-                    target.openingDate = nil
-                    ledger.wallets = [target]
-                    ledger.defaultWalletID = targetID
-                    ledger.transactions = imported
-                    ledger.transfers = []
-                    if backup.formatVersion > 0 { ledger.currency = backup.currencyCode }
-                } else {
-                    let ids = Set(ledger.transactions.map(\.id))
-                    ledger.transactions += imported.filter { !ids.contains($0.id) }
-                }
-            }
+            try apply(backup, mode: mode, importWalletID: importWalletID, to: &ledger)
             return ledger.currency
         }
+        restoreSettings(from: backup, mode: mode, importWalletID: importWalletID)
+        NotificationCenter.default.post(name: .inpensoDataDidChange, object: nil)
+        return currency
+    }
 
+    /// Writes the backup's wallets, transactions and transfers into the ledger.
+    private static func apply(
+        _ backup: InpensoBackup,
+        mode: RestoreMode,
+        importWalletID: UUID?,
+        to ledger: inout WalletLedger
+    ) throws {
+        if mode == .merge, backup.formatVersion > 0, backup.currencyCode != ledger.currency {
+            throw BackupError.currencyMismatch
+        }
+        if backup.formatVersion >= 2 {
+            var incoming = try makeLedger(from: backup)
+            try incoming.prepareForWrite()
+            if mode == .replace { ledger = incoming } else { merge(incoming, into: &ledger) }
+        } else {
+            let targetID = importWalletID ?? ledger.defaultWalletID
+            guard var target = ledger.wallets.first(where: { $0.id == targetID && !$0.isArchived })
+            else { throw WalletError.unknownWallet }
+            let imported = uniqueByID(backup.transactions).map {
+                var expense = $0
+                expense.walletID = targetID
+                return expense
+            }
+            if mode == .replace {
+                target.openingBalance = 0
+                target.openingDate = nil
+                ledger.wallets = [target]
+                ledger.defaultWalletID = targetID
+                ledger.transactions = imported
+                ledger.transfers = []
+                ledger.instalmentPlans = nil
+                if backup.formatVersion > 0 { ledger.currency = backup.currencyCode }
+            } else {
+                let ids = Set(ledger.transactions.map(\.id))
+                ledger.transactions += imported.filter { !ids.contains($0.id) }
+            }
+        }
+    }
+
+    /// Restores budgets, recurring rules, category limits and the category catalog.
+    private static func restoreSettings(from backup: InpensoBackup, mode: RestoreMode, importWalletID: UUID?) {
         switch mode {
         case .replace:
             StorageService.saveBudgets(backup.budgets)
@@ -253,21 +274,22 @@ enum BackupService {
                 StorageService.saveCustomCategories(catalog.customCategories)
             }
         }
-
-        NotificationCenter.default.post(name: .inpensoDataDidChange, object: nil)
-        return currency
     }
 
     private static func makeLedger(from backup: InpensoBackup) throws -> WalletLedger {
-        guard let wallets = backup.wallets, let transfers = backup.transfers,
+        guard let wallets = backup.wallets, var transfers = backup.transfers,
               let defaultWalletID = backup.defaultWalletID
         else { throw BackupError.unreadableFile }
+        if backup.formatVersion < 4 {
+            for index in transfers.indices { transfers[index].instalmentPlanID = nil }
+        }
         return WalletLedger(
             wallets: wallets,
             defaultWalletID: defaultWalletID,
             transactions: uniqueByID(backup.transactions),
             transfers: transfers,
-            currency: backup.currencyCode
+            currency: backup.currencyCode,
+            instalmentPlans: backup.formatVersion >= 4 ? backup.instalmentPlans : nil
         )
     }
 
@@ -275,14 +297,32 @@ enum BackupService {
         var walletIDs = Set(ledger.wallets.map(\.id))
         ledger.wallets += incoming.wallets.filter { walletIDs.insert($0.id).inserted }
 
+        if let incomingPlans = incoming.instalmentPlans {
+            var plans = ledger.instalmentPlans ?? []
+            var ids = Set(plans.map(\.id))
+            plans += incomingPlans.filter { ids.insert($0.id).inserted }
+            ledger.instalmentPlans = plans
+        }
+
         let incomingFeeIDs = Set(incoming.transfers.compactMap(\.feeExpenseID))
         var expenseIDs = Set(ledger.transactions.map(\.id))
         ledger.transactions += incoming.transactions.filter {
             !incomingFeeIDs.contains($0.id) && expenseIDs.insert($0.id).inserted
         }
 
-        var transferIDs = Set(ledger.transfers.map(\.id))
-        for var transfer in incoming.transfers where transferIDs.insert(transfer.id).inserted {
+        let transferIndices = Dictionary(
+            ledger.transfers.enumerated().map { ($0.element.id, $0.offset) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for var transfer in incoming.transfers {
+            if let index = transferIndices[transfer.id] {
+                if let planID = transfer.instalmentPlanID,
+                   ledger.transfers[index].instalmentPlanID == nil,
+                   ledger.transfers[index].toWalletID == transfer.toWalletID {
+                    ledger.transfers[index].instalmentPlanID = planID
+                }
+                continue
+            }
             if let feeID = transfer.feeExpenseID, !expenseIDs.insert(feeID).inserted {
                 let replacementID = UUID()
                 transfer.feeExpenseID = replacementID

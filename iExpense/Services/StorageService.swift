@@ -22,13 +22,14 @@ struct WalletLedger: Codable {
     var transactions: [Expense]
     var transfers: [Transfer]
     var currency: String
+    var instalmentPlans: [InstalmentPlan]?
 
     static func initial(transactions: [Expense], currency: String) -> Self {
         let cash = Wallet(name: "Cash", kind: .cash, iconName: WalletKind.cash.defaultIconName, colorHex: "#34785D")
         return Self(wallets: [cash], defaultWalletID: cash.id, transactions: transactions, transfers: [], currency: currency)
     }
 
-    var hasActivity: Bool { !transactions.isEmpty || !transfers.isEmpty }
+    var hasActivity: Bool { !transactions.isEmpty || !transfers.isEmpty || !(instalmentPlans ?? []).isEmpty }
 
     mutating func prepareForWrite() throws {
         let walletsByID = Dictionary(wallets.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -37,11 +38,51 @@ struct WalletLedger: Codable {
               Set(transfers.map(\.id)).count == transfers.count
         else { throw WalletError.storageFailure }
 
+        let plansByID = try validateCreditData(walletsByID: walletsByID)
+        try normalizeTransactions(walletsByID: walletsByID)
+        let feeIDs = try validateTransfers(walletsByID: walletsByID, plansByID: plansByID)
+        rebuildTransferFees(replacing: feeIDs)
+    }
+
+    /// Fills missing wallets, normalizes category IDs and checks each transaction's wallet exists.
+    private mutating func normalizeTransactions(walletsByID: [UUID: Wallet]) throws {
         for index in transactions.indices {
             if transactions[index].walletID == nil { transactions[index].walletID = defaultWalletID }
+            let categoryID = Category.normalizedCategoryID(transactions[index].categoryID, for: transactions[index].type)
+            if categoryID != transactions[index].categoryID, let category = Category.category(from: categoryID) {
+                transactions[index].categoryID = categoryID
+                transactions[index].category = category
+            }
+            if transactions[index].type != .refund { transactions[index].refundOfID = nil }
             guard let id = transactions[index].walletID, walletsByID[id] != nil else { throw WalletError.unknownWallet }
         }
+    }
 
+    private func validateCreditData(walletsByID: [UUID: Wallet]) throws -> [UUID: InstalmentPlan] {
+        for wallet in wallets {
+            guard wallet.creditLimit.map({ $0.isFinite && $0 >= 0 }) ?? true,
+                  wallet.statementDay.map({ (1...31).contains($0) }) ?? true,
+                  wallet.dueDay.map({ (1...31).contains($0) }) ?? true
+            else { throw WalletError.invalidAmount }
+        }
+        var plansByID: [UUID: InstalmentPlan] = [:]
+        for plan in instalmentPlans ?? [] {
+            guard walletsByID[plan.creditWalletID]?.kind.isCredit == true,
+                  plan.payFromWalletID.map({ walletsByID[$0] != nil && $0 != plan.creditWalletID }) ?? true
+            else { throw WalletError.unknownWallet }
+            guard plan.months >= 1,
+                  plan.scheduledDay.map({ (1...31).contains($0) }) ?? true,
+                  [plan.principal, plan.monthlyAmount, plan.monthlyFee].allSatisfy({ $0.isFinite && $0 >= 0 }),
+                  plansByID.updateValue(plan, forKey: plan.id) == nil
+            else { throw WalletError.invalidAmount }
+        }
+        return plansByID
+    }
+
+    /// Checks every transfer and returns the IDs of their fee transactions.
+    private func validateTransfers(
+        walletsByID: [UUID: Wallet], plansByID: [UUID: InstalmentPlan]
+    ) throws -> Set<UUID> {
         var feeIDs = Set<UUID>()
         for transfer in transfers {
             guard transfer.fromWalletID != transfer.toWalletID,
@@ -51,17 +92,25 @@ struct WalletLedger: Codable {
                   transfer.amount.isFinite, transfer.amount > 0,
                   (transfer.feeAmount ?? 0).isFinite, (transfer.feeAmount ?? 0) >= 0
             else { throw WalletError.invalidAmount }
+            if let planID = transfer.instalmentPlanID {
+                guard plansByID[planID]?.creditWalletID == transfer.toWalletID else { throw WalletError.unknownWallet }
+            }
             if (transfer.feeAmount ?? 0) > 0 {
                 guard let id = transfer.feeExpenseID, feeIDs.insert(id).inserted else { throw WalletError.storageFailure }
             } else if transfer.feeExpenseID != nil {
                 throw WalletError.storageFailure
             }
         }
+        return feeIDs
+    }
+
+    /// Replaces stored fee transactions with ones derived from the transfers.
+    private mutating func rebuildTransferFees(replacing feeIDs: Set<UUID>) {
         transactions.removeAll { feeIDs.contains($0.id) }
         for transfer in transfers {
             guard let id = transfer.feeExpenseID, let fee = transfer.feeAmount else { continue }
             transactions.append(Expense(
-                id: id, title: "Transfer fee", price: fee, date: transfer.date, category: .others,
+                id: id, title: "Transfer fee", price: fee, date: transfer.date, category: .feesInterest,
                 walletID: transfer.fromWalletID
             ))
         }
@@ -278,6 +327,7 @@ struct StorageService {
         try updateLedger {
             $0.transactions.removeAll()
             $0.transfers.removeAll()
+            $0.instalmentPlans = nil
         }
     }
 

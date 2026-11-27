@@ -68,6 +68,13 @@ enum WalletService {
         StorageService.loadLedger()?.transfers ?? []
     }
 
+    static func payInstalment(_ plan: InstalmentPlan, amount: Double, from walletID: UUID, date: Date) throws {
+        try saveTransfer(Transfer(
+            fromWalletID: walletID, toWalletID: plan.creditWalletID, amount: amount,
+            date: date, note: plan.title, instalmentPlanID: plan.id
+        ))
+    }
+
     static func saveTransfer(_ transfer: Transfer) throws {
         guard transfer.fromWalletID != transfer.toWalletID else { throw WalletError.sameWallet }
         let fee = transfer.feeAmount ?? 0
@@ -89,8 +96,13 @@ enum WalletService {
             }
 
             var updated = transfer
-            updated.feeAmount = fee > 0 ? fee : nil
-            updated.feeExpenseID = fee > 0 ? (existing?.feeExpenseID ?? UUID()) : nil
+            if existing == nil, let planID = transfer.instalmentPlanID,
+               let plan = ledger.instalmentPlans?.first(where: { $0.id == planID }) {
+                updated.feeAmount = plan.monthlyFee
+            }
+            let appliedFee = updated.feeAmount ?? 0
+            updated.feeAmount = appliedFee > 0 ? appliedFee : nil
+            updated.feeExpenseID = appliedFee > 0 ? (existing?.feeExpenseID ?? UUID()) : nil
             if let feeID = existing?.feeExpenseID {
                 ledger.transactions.removeAll { $0.id == feeID }
             }
@@ -111,6 +123,27 @@ enum WalletService {
 
     static func balances(asOf: Date = Date()) -> [UUID: Double] {
         guard let ledger = StorageService.loadLedger() else { return [:] }
+        return balances(in: ledger, asOf: asOf)
+    }
+
+    /// Reconciles a wallet with its real-world balance by moving the opening balance,
+    /// so a ledger that starts mid-history (e.g. one imported month) still ends on the right number.
+    static func setCurrentBalance(_ id: UUID, to target: Double, asOf: Date = Date()) throws {
+        guard target.isFinite else { throw WalletError.storageFailure }
+        try StorageService.updateLedger { ledger in
+            guard let index = ledger.wallets.firstIndex(where: { $0.id == id })
+            else { throw WalletError.unknownWallet }
+            // An opening date in the future would hide the opening balance from today's total.
+            if let openingDate = ledger.wallets[index].openingDate, openingDate > asOf {
+                ledger.wallets[index].openingDate = Calendar.current.startOfDay(for: asOf)
+            }
+            let current = balances(in: ledger, asOf: asOf)[id] ?? ledger.wallets[index].openingBalance
+            ledger.wallets[index].openingBalance += target - current
+        }
+        notify()
+    }
+
+    static func balances(in ledger: WalletLedger, asOf: Date) -> [UUID: Double] {
         let wallets = Dictionary(ledger.wallets.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var result = wallets.mapValues {
             ($0.openingDate.map { $0 <= asOf } ?? true) ? $0.openingBalance : 0
@@ -123,7 +156,7 @@ enum WalletService {
 
         for expense in ledger.transactions {
             guard let id = expense.walletID, includes(id, expense.date) else { continue }
-            result[id, default: 0] += expense.type == .income ? expense.price : -expense.price
+            result[id, default: 0] += expense.signedAmount
         }
         for transfer in ledger.transfers {
             if includes(transfer.fromWalletID, transfer.date) { result[transfer.fromWalletID, default: 0] -= transfer.amount }
