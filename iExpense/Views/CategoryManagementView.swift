@@ -7,19 +7,36 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 struct CategoryManagementView: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var categoryStore: CategoryStore
     @EnvironmentObject private var settingsViewModel: SettingsViewModel
     @State private var categoryToEdit: FinanceCategory?
     @State private var showingEditor = false
     @State private var targetedCategoryID: String?
     @State private var draggedCategoryID: String?
+    @State private var showingReorder = false
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 12), count: 3)
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 12), count: dynamicTypeSize.isAccessibilitySize ? 2 : 3)
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                categorySection(title: "Visible", categories: categoryStore.visibleCategories, isHiddenSection: false)
+                Text(categoryStore.sortsByUsage
+                     ? "Sorted by most used in the last \(CategoryStore.usageWindowDays) days. Pickers follow this order."
+                     : "Pickers follow this order. Press and hold a tile to drag it, or use the sort menu.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+
+                ForEach(CategoryKind.allCases) { kind in
+                    categorySection(
+                        title: kind == .income ? "Income" : "Expenses",
+                        categories: categoryStore.visibleCategories.filter { $0.kind == kind },
+                        isHiddenSection: false
+                    )
+                }
 
                 if !categoryStore.hiddenCategories.isEmpty {
                     categorySection(title: "Hidden", categories: categoryStore.hiddenCategories, isHiddenSection: true)
@@ -31,19 +48,55 @@ struct CategoryManagementView: View {
         .navigationTitle("Categories")
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
+                sortMenu
+            }
+            ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     categoryToEdit = nil
                     showingEditor = true
                 } label: {
-                    Image(systemName: "plus")
+                    Label("Add Category", systemImage: "plus")
+                        .labelStyle(.iconOnly)
                 }
             }
+        }
+        .sheet(isPresented: $showingReorder) {
+            CategoryReorderView()
+                .environmentObject(categoryStore)
         }
         .sheet(isPresented: $showingEditor) {
             CategoryEditorView(category: categoryToEdit)
                 .environmentObject(categoryStore)
                 .environmentObject(settingsViewModel)
         }
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            Toggle(isOn: Binding(get: { categoryStore.sortsByUsage }, set: { categoryStore.setSortsByUsage($0) })) {
+                Label("Always Sort by Most Used", systemImage: "chart.bar")
+            }
+            Section("Sort once") {
+                Button {
+                    CategoryKind.allCases.forEach(categoryStore.sortByUsage(kind:))
+                } label: {
+                    Label("Most Used", systemImage: "flame")
+                }
+                Button {
+                    CategoryKind.allCases.forEach(categoryStore.sortAlphabetically(kind:))
+                } label: {
+                    Label("A to Z", systemImage: "textformat")
+                }
+            }
+            Button {
+                showingReorder = true
+            } label: {
+                Label("Reorder…", systemImage: "line.3.horizontal")
+            }
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+        }
+        .accessibilityLabel("Sort categories")
     }
 
     private func categorySection(title: String, categories: [FinanceCategory], isHiddenSection: Bool) -> some View {
@@ -53,8 +106,8 @@ struct CategoryManagementView: View {
 
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(categories) { category in
-                    if isHiddenSection {
-                        managementTile(for: category, isHiddenSection: true)
+                    if isHiddenSection || categoryStore.sortsByUsage {
+                        managementTile(for: category, isHiddenSection: isHiddenSection)
                     } else {
                         managementTile(for: category, isHiddenSection: false)
                             .onDrag {
@@ -77,7 +130,7 @@ struct CategoryManagementView: View {
                                     }
                                 )
                             )
-                            .animation(.spring(response: 0.28, dampingFraction: 0.82), value: categoryStore.visibleCategories.map(\.id))
+                            .animation(reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.82), value: categoryStore.visibleCategories.map(\.id))
                             .onDisappear {
                                 if draggedCategoryID == category.id {
                                     clearDragState()
@@ -149,6 +202,7 @@ private struct CategoryEditorView: View {
     @State private var name: String
     @State private var iconName: String
     @State private var colorHex: String
+    @State private var kind: CategoryKind
     @State private var showingValidation = false
 
     private let icons = [
@@ -156,13 +210,13 @@ private struct CategoryEditorView: View {
         "gift.fill", "cart.fill", "fork.knife", "house.fill",
         "car.fill", "tram.fill", "airplane", "heart.fill",
         "cross.case.fill", "book.fill", "graduationcap.fill", "gamecontroller.fill",
-        "music.note", "pawprint.fill", "leaf.fill", "hammer.fill"
+        "music.note", "pawprint.fill", "leaf.fill", "hammer.fill",
     ]
 
     private let colors = [
         "#007AFF", "#34C759", "#FF9500", "#FF3B30",
         "#AF52DE", "#FF2D55", "#5856D6", "#00C7BE",
-        "#30B0C7", "#FFCC00", "#8E8E93", "#A2845E"
+        "#30B0C7", "#FFCC00", "#8E8E93", "#A2845E",
     ]
 
     init(category: FinanceCategory?) {
@@ -170,13 +224,28 @@ private struct CategoryEditorView: View {
         _name = State(initialValue: category?.name ?? "")
         _iconName = State(initialValue: category?.iconName ?? "tag.fill")
         _colorHex = State(initialValue: category?.colorHex ?? "#007AFF")
+        _kind = State(initialValue: category?.kind ?? .expense)
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
-                Section("Details") {
+                Section {
                     TextField("Name", text: $name)
+                    if category == nil {
+                        Picker("Used for", selection: $kind) {
+                            ForEach(CategoryKind.allCases) { kind in
+                                Text(kind.displayName).tag(kind)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                } header: {
+                    Text("Details")
+                } footer: {
+                    if category == nil {
+                        Text("Expense categories also hold refunds and cashback for that kind of spending.")
+                    }
                 }
 
                 Section("Icon") {
@@ -186,13 +255,15 @@ private struct CategoryEditorView: View {
                                 iconName = icon
                             } label: {
                                 Image(systemName: icon)
-                                    .font(.system(size: 20, weight: .semibold))
-                                    .foregroundColor(iconName == icon ? .white : .primary)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundColor(.primary)
                                     .frame(width: 44, height: 44)
-                                    .background(iconName == icon ? Color.accentColor : Color(.tertiarySystemBackground))
+                                    .background(iconName == icon ? Color.accentColor.opacity(0.2) : Color(.tertiarySystemBackground))
                                     .clipShape(Circle())
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(icon.replacingOccurrences(of: ".", with: " "))
+                            .accessibilityAddTraits(iconName == icon ? .isSelected : [])
                         }
                     }
                     .padding(.vertical, 6)
@@ -211,11 +282,13 @@ private struct CategoryEditorView: View {
                                         if colorHex == color {
                                             Image(systemName: "checkmark")
                                                 .font(.caption.weight(.bold))
-                                                .foregroundColor(.white)
+                                                .foregroundStyle((Color(hex: color) ?? .gray).badgeForeground)
                                         }
                                     }
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel("Color \(color)")
+                            .accessibilityAddTraits(colorHex == color ? .isSelected : [])
                         }
                     }
                     .padding(.vertical, 6)
@@ -285,7 +358,7 @@ private struct CategoryEditorView: View {
             category.colorHex = colorHex
             categoryStore.updateCategory(category)
         } else {
-            categoryStore.addCategory(name: trimmedName, iconName: iconName, colorHex: colorHex)
+            categoryStore.addCategory(name: trimmedName, iconName: iconName, colorHex: colorHex, kind: kind)
         }
 
         dismiss()
@@ -299,171 +372,8 @@ private struct CategoryEditorView: View {
     }
 }
 
-private struct CategoryManagementTile: View {
-    let category: FinanceCategory
-    let isTargeted: Bool
-    let isHidden: Bool
-    let canReset: Bool
-    let onEdit: () -> Void
-    let onHide: () -> Void
-    let onRestore: () -> Void
-    let onReset: () -> Void
-
-    var body: some View {
-        VStack(spacing: 8) {
-            ZStack(alignment: .topTrailing) {
-                Circle()
-                    .fill(category.color)
-                    .frame(width: 56, height: 56)
-
-                Image(systemName: category.iconName)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 56, height: 56)
-
-                menu
-                    .offset(x: 10, y: -10)
-            }
-
-            Text(category.displayName)
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundColor(isHidden ? .secondary : .primary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .minimumScaleFactor(0.8)
-                .frame(height: 32)
-
-            if isHidden {
-                Button(action: onRestore) {
-                    Label("Restore", systemImage: "eye")
-                        .font(.caption2.weight(.semibold))
-                }
-                .buttonStyle(.borderless)
-            } else {
-                Image(systemName: "line.3.horizontal")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundColor(.secondary)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .frame(minHeight: 124)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(isTargeted ? Color.accentColor : Color.clear, lineWidth: 2)
-        )
-        .opacity(isHidden ? 0.65 : 1)
-        .scaleEffect(isTargeted ? 1.03 : 1)
-        .contentShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .onTapGesture(perform: onEdit)
-        .animation(.spring(response: 0.22, dampingFraction: 0.85), value: isTargeted)
-    }
-
-    private var menu: some View {
-        Menu {
-            Button(action: onEdit) {
-                Label("Edit", systemImage: "pencil")
-            }
-
-            if isHidden {
-                Button(action: onRestore) {
-                    Label("Restore", systemImage: "eye")
-                }
-            } else {
-                Button(role: .destructive, action: onHide) {
-                    Label("Remove", systemImage: "eye.slash")
-                }
-            }
-
-            if canReset {
-                Divider()
-
-                Button(role: .destructive, action: onReset) {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
-                }
-            }
-        } label: {
-            Image(systemName: "ellipsis.circle.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(Color.secondary, Color(.systemBackground))
-                .padding(6)
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct CategoryDragPreview: View {
-    let category: FinanceCategory
-
-    var body: some View {
-        VStack(spacing: 6) {
-            Circle()
-                .fill(category.color)
-                .frame(width: 52, height: 52)
-                .overlay {
-                    Image(systemName: category.iconName)
-                        .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-
-            Text(category.displayName)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .lineLimit(1)
-        }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(Color(.systemBackground))
-        )
-    }
-}
-
-private struct CategoryReorderDropDelegate: DropDelegate {
-    let destinationCategoryID: String
-    @Binding var draggedCategoryID: String?
-    @Binding var targetedCategoryID: String?
-    let moveCategory: (String, String) -> Void
-    let clearDragState: () -> Void
-
-    func dropEntered(info: DropInfo) {
-        guard let sourceCategoryID = draggedCategoryID,
-              sourceCategoryID != destinationCategoryID else {
-            return
-        }
-
-        targetedCategoryID = destinationCategoryID
-
-        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
-            moveCategory(sourceCategoryID, destinationCategoryID)
-        }
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func dropExited(info: DropInfo) {
-        if targetedCategoryID == destinationCategoryID {
-            targetedCategoryID = nil
-        }
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        clearDragState()
-        return true
-    }
-}
-
 #Preview {
-    NavigationView {
+    NavigationStack {
         CategoryManagementView()
             .environmentObject(SettingsViewModel())
             .environmentObject(CategoryStore())
