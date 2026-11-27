@@ -29,7 +29,8 @@ struct AddQuickExpenseIntent: AppIntent {
             title: title,
             price: price,
             date: Date(),
-            category: Category(rawValue: category) ?? .others
+            category: Category(rawValue: category) ?? .others,
+            type: Category(rawValue: category)?.kind == .income ? .income : .expense
         )
         try StorageService.updateLedger { ledger in
             newExpense.walletID = ledger.defaultWalletID

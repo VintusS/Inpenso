@@ -65,8 +65,8 @@ struct CategoryBudgetsView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: category.iconName)
-                    .font(.system(size: 12))
-                    .foregroundColor(.white)
+                    .font(.caption)
+                    .foregroundStyle(category.color.badgeForeground)
                     .frame(width: 24, height: 24)
                     .background(category.color)
                     .cornerRadius(6)
@@ -118,10 +118,10 @@ struct CategoryBudgetEditor: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section {
-                    ForEach(categoryStore.categoriesForPicker()) { category in
+                    ForEach(categoryStore.categoriesForPicker(kind: .expense)) { category in
                         HStack {
                             Label(category.displayName, systemImage: category.iconName)
                             AmountTextField(placeholder: "No limit", raw: binding(for: category.id), input: input)

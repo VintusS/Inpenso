@@ -21,7 +21,11 @@ enum RecurringService {
               let rules = try? JSONDecoder().decode([RecurringRule].self, from: data) else {
             return []
         }
-        return rules
+        return rules.map { rule in
+            var rule = rule
+            rule.categoryID = Category.normalizedCategoryID(rule.categoryID, for: rule.type)
+            return rule
+        }
     }
 
     static func saveRules(_ rules: [RecurringRule]) {

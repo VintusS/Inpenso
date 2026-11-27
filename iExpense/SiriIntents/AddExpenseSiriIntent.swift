@@ -36,7 +36,8 @@ struct AddExpenseSiriIntent: AppIntent {
             title: title,
             price: price,
             date: Date(),
-            category: category
+            category: category,
+            type: category.kind == .income ? .income : .expense
         )
         try StorageService.updateLedger { ledger in
             newExpense.walletID = ledger.defaultWalletID

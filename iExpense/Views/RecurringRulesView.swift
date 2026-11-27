@@ -32,7 +32,7 @@ struct RecurringRulesView: View {
                 }
             }
 
-            ForEach(TransactionType.allCases) { type in
+            ForEach(TransactionType.recurringCases) { type in
                 let rules = recurringViewModel.rules.filter { $0.type == type }
                 if !rules.isEmpty {
                     Section(type == .income ? "Income" : "Expenses") {
@@ -58,7 +58,7 @@ struct RecurringRulesView: View {
                         title: "",
                         amount: 0,
                         type: .income,
-                        categoryID: categoryStore.preferredCategoryID(for: nil),
+                        categoryID: categoryStore.preferredCategoryID(for: nil, kind: .income),
                         dayOfMonth: Calendar.current.component(.day, from: Date()),
                         startDate: Calendar.current.startOfDay(for: Date())
                     )
@@ -81,8 +81,8 @@ struct RecurringRulesView: View {
         let category = categoryStore.category(for: rule.categoryID)
         return HStack(spacing: 12) {
             Image(systemName: category.iconName)
-                .font(.system(size: 14))
-                .foregroundColor(.white)
+                .font(.subheadline)
+                .foregroundStyle(category.color.badgeForeground)
                 .frame(width: 28, height: 28)
                 .background(category.color)
                 .cornerRadius(6)
@@ -142,15 +142,18 @@ struct RecurringRuleEditor: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 Section {
                     Picker("Type", selection: $rule.type) {
-                        ForEach(TransactionType.allCases) { type in
+                        ForEach(TransactionType.recurringCases) { type in
                             Text(type.displayName).tag(type)
                         }
                     }
                     .pickerStyle(.segmented)
+                    .onChange(of: rule.type) { _, newType in
+                        rule.categoryID = categoryStore.preferredCategoryID(for: rule.categoryID, kind: newType.categoryKind)
+                    }
 
                     TextField("Title, e.g. Salary", text: $rule.title)
 
@@ -171,7 +174,7 @@ struct RecurringRuleEditor: View {
                     )
 
                     Picker("Category", selection: $rule.categoryID) {
-                        ForEach(categoryStore.categoriesForPicker(including: rule.categoryID)) { category in
+                        ForEach(categoryStore.categoriesForPicker(kind: rule.type.categoryKind, including: rule.categoryID)) { category in
                             Label(category.displayName, systemImage: category.iconName).tag(category.id)
                         }
                     }

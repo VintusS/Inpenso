@@ -67,7 +67,7 @@ final class LogicTests: XCTestCase {
 
         let expected = Expense(
             id: feeID, title: "Transfer fee", price: 2_500, date: transfer.date,
-            category: .others, walletID: transfer.fromWalletID
+            category: .feesInterest, walletID: transfer.fromWalletID
         )
         XCTAssertEqual(ledger.transactions, [ordinary, expected])
     }
