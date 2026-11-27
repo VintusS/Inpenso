@@ -12,14 +12,14 @@ struct SettingsView: View {
     
     @State private var showingImportFilePicker = false
     @State private var showingExportShareSheet = false
-    @State private var exportURL: URL? = nil
+    @State private var exportURL: URL?
     @State private var showingResetConfirmation = false
     @State private var showingImportSuccess = false
     @State private var restorePreview: RestorePreview?
     @State private var dataErrorMessage: String?
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Form {
                 // Appearance Section
                 appearanceSection
@@ -98,9 +98,13 @@ struct SettingsView: View {
             }
         }
     }
-    
+}
+
+// MARK: - Sections
+
+extension SettingsView {
     // MARK: - UI Components
-    
+
     private var appearanceSection: some View {
         Section(header: Text("Appearance")) {
             themePicker
@@ -147,7 +151,7 @@ struct SettingsView: View {
         .pickerStyle(.menu)
     }
     
-    private func currencyRow(for currency: (code: String, symbol: String, name: String)) -> some View {
+    private func currencyRow(for currency: CurrencyOption) -> some View {
         Text("\(currency.symbol) \(currency.name) (\(currency.code))")
             .tag(currency.code)
     }
@@ -160,7 +164,7 @@ struct SettingsView: View {
     
     private var categoryPicker: some View {
         Picker("Default Category", selection: $settingsManager.defaultCategoryID) {
-            ForEach(categoryStore.allCategories) { category in
+            ForEach(categoryStore.categoriesForPicker(kind: .expense)) { category in
                 categoryRow(for: category)
             }
         }
@@ -212,34 +216,75 @@ struct SettingsView: View {
     }
     
     private var exportButton: some View {
-        Button(action: {
+        Button {
             exportData()
-        }) {
+        } label: {
             Label("Back Up Data", systemImage: "square.and.arrow.up")
         }
     }
-    
+
     private var importButton: some View {
-        Button(action: {
+        Button {
             showingImportFilePicker = true
-        }) {
+        } label: {
             Label("Restore Backup", systemImage: "square.and.arrow.down")
         }
     }
-    
+
     private var resetButton: some View {
-        Button(role: .destructive, action: {
+        Button(role: .destructive) {
             showingResetConfirmation = true
-        }) {
+        } label: {
             Label("Reset All Data", systemImage: "trash")
         }
         .foregroundColor(.red)
     }
     
     private var aboutSection: some View {
-        Section(header: Text("About")) {
+        Section {
             versionRow
+            if let expiry = ProvisioningInfo.expirationDate {
+                reinstallRow(expiry)
+            }
+        } header: {
+            Text("About")
+        } footer: {
+            if ProvisioningInfo.expirationDate != nil {
+                Text("This build is signed for development and stops opening after that date. "
+                     + "Reinstall it from Xcode before then; your data stays.")
+            }
         }
+    }
+
+    private func reinstallRow(_ expiry: Date) -> some View {
+        let calendar = Calendar.current
+        let daysLeft = calendar.dateComponents([.day], from: calendar.startOfDay(for: Date()),
+                                               to: calendar.startOfDay(for: expiry)).day ?? 0
+        let tint: Color = expiry < Date() ? .red : (daysLeft <= 1 ? .orange : .secondary)
+        let relative: String = {
+            if expiry < Date() { return "Expired" }
+            switch daysLeft {
+            case 0:
+                return "Today"
+            case 1:
+                return "Tomorrow"
+            default:
+                return "In \(daysLeft) days"
+            }
+        }()
+        return HStack(alignment: .firstTextBaseline) {
+            Text("Reinstall by")
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(expiry, format: .dateTime.weekday(.abbreviated).day().month(.abbreviated).hour().minute())
+                    .foregroundColor(tint == .secondary ? .secondary : tint)
+                Text(relative)
+                    .font(.caption)
+                    .foregroundColor(tint)
+            }
+            .multilineTextAlignment(.trailing)
+        }
+        .accessibilityElement(children: .combine)
     }
     
     private var versionRow: some View {
