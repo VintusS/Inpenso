@@ -79,7 +79,7 @@ enum WalletService {
             let existing = index.map { ledger.transfers[$0] }
             let endpoints = [
                 (transfer.fromWalletID, existing?.fromWalletID),
-                (transfer.toWalletID, existing?.toWalletID)
+                (transfer.toWalletID, existing?.toWalletID),
             ]
             for (id, priorID) in endpoints {
                 guard let wallet = ledger.wallets.first(where: { $0.id == id }), !wallet.isArchived || id == priorID

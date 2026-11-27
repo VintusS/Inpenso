@@ -16,19 +16,27 @@ enum WalletKind: String, Codable, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .cash: return "Cash"
-        case .bank: return "Bank"
-        case .eWallet: return "E-Wallet"
-        case .other: return "Other"
+        case .cash:
+            return "Cash"
+        case .bank:
+            return "Bank"
+        case .eWallet:
+            return "E-Wallet"
+        case .other:
+            return "Other"
         }
     }
 
     var defaultIconName: String {
         switch self {
-        case .cash: return "banknote.fill"
-        case .bank: return "building.columns.fill"
-        case .eWallet: return "iphone.gen3"
-        case .other: return "wallet.pass.fill"
+        case .cash:
+            return "banknote.fill"
+        case .bank:
+            return "building.columns.fill"
+        case .eWallet:
+            return "iphone.gen3"
+        case .other:
+            return "wallet.pass.fill"
         }
     }
 }
@@ -75,11 +83,16 @@ enum WalletError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .sameWallet: return "Choose two different wallets."
-        case .invalidAmount: return "Enter an amount above zero."
-        case .unknownWallet: return "That wallet no longer exists."
-        case .lastActiveWallet: return "Keep at least one active wallet."
-        case .storageFailure: return "Couldn't save. Try again."
+        case .sameWallet:
+            return "Choose two different wallets."
+        case .invalidAmount:
+            return "Enter an amount above zero."
+        case .unknownWallet:
+            return "That wallet no longer exists."
+        case .lastActiveWallet:
+            return "Keep at least one active wallet."
+        case .storageFailure:
+            return "Couldn't save. Try again."
         }
     }
 }

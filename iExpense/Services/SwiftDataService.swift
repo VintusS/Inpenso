@@ -69,4 +69,4 @@ struct SwiftDataService {
             }
         }
     }
-} 
+}

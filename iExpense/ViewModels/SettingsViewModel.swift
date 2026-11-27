@@ -85,7 +85,6 @@ class SettingsViewModel: ObservableObject {
         }
     }
     
-    
     init() {
         let sharedDefaults = UserDefaults(suiteName: StorageService.appGroupID)
         let ledger = StorageService.loadLedger()

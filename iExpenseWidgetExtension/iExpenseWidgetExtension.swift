@@ -48,7 +48,7 @@ func getMonthlyBudget() -> Double {
                 let budgets = try JSONDecoder().decode([String: Double].self, from: budgetsData)
                 
                 let now = Calendar.current.dateComponents([.month, .year], from: Date())
-                return StorageService.effectiveBudget(month: now.month ?? 1, year: now.year ?? 2000, in: budgets)
+                return StorageService.effectiveBudget(month: now.month ?? 1, year: now.year ?? 2_000, in: budgets)
             } catch {
                 return 0
             }

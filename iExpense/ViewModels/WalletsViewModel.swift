@@ -17,25 +17,33 @@ struct WalletActivity: Identifiable {
 
     var id: String {
         switch kind {
-        case .transaction(let expense): return "tx-\(expense.id)"
-        case .transferOut(let transfer, _): return "out-\(transfer.id)"
-        case .transferIn(let transfer, _): return "in-\(transfer.id)"
+        case .transaction(let expense):
+            return "tx-\(expense.id)"
+        case .transferOut(let transfer, _):
+            return "out-\(transfer.id)"
+        case .transferIn(let transfer, _):
+            return "in-\(transfer.id)"
         }
     }
 
     var date: Date {
         switch kind {
-        case .transaction(let expense): return expense.date
-        case .transferOut(let transfer, _), .transferIn(let transfer, _): return transfer.date
+        case .transaction(let expense):
+            return expense.date
+        case .transferOut(let transfer, _), .transferIn(let transfer, _):
+            return transfer.date
         }
     }
 
     /// Signed effect on this wallet's balance.
     var signedAmount: Double {
         switch kind {
-        case .transaction(let expense): return expense.type == .income ? expense.price : -expense.price
-        case .transferOut(let transfer, _): return -transfer.amount
-        case .transferIn(let transfer, _): return transfer.amount
+        case .transaction(let expense):
+            return expense.type == .income ? expense.price : -expense.price
+        case .transferOut(let transfer, _):
+            return -transfer.amount
+        case .transferIn(let transfer, _):
+            return transfer.amount
         }
     }
 }

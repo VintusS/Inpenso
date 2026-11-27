@@ -96,4 +96,4 @@ Project Link: [https://github.com/VintusS/Inpenso](https://github.com/VintusS/In
 
 ## Topics
 
-ios swift swiftui expense-tracker personal-finance budget-app analytics data-visualization mobile-app productivity tools 
+ios swift swiftui expense-tracker personal-finance budget-app analytics data-visualization mobile-app productivity tools

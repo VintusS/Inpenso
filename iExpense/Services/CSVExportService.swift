@@ -44,7 +44,7 @@ enum CSVExportService {
                 currencyCode,
                 transaction.notes ?? "",
                 transaction.walletID.flatMap { walletNames[$0] } ?? "",
-                "", "", ""
+                "", "", "",
             ]
             .map(quotedField)
             .joined(separator: ",")
@@ -59,7 +59,7 @@ enum CSVExportService {
                 "",
                 walletNames[transfer.fromWalletID] ?? "",
                 walletNames[transfer.toWalletID] ?? "",
-                transfer.feeAmount.map(plainAmount) ?? ""
+                transfer.feeAmount.map(plainAmount) ?? "",
             ]
             .map(quotedField)
             .joined(separator: ",")

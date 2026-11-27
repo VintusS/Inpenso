@@ -14,10 +14,16 @@ struct CategoryBudgetsView: View {
     let onSave: ([String: Double]) -> Void
     @State private var showingEditor = false
 
-    private var rows: [(category: FinanceCategory, spent: Double, limit: Double)] {
+    private struct LimitRow {
+        let category: FinanceCategory
+        let spent: Double
+        let limit: Double
+    }
+
+    private var rows: [LimitRow] {
         categoryStore.orderedCategoryIDs(for: Set(limits.keys)).compactMap { id in
             guard let limit = limits[id], limit > 0 else { return nil }
-            return (categoryStore.category(for: id), spendingByCategory[id] ?? 0, limit)
+            return LimitRow(category: categoryStore.category(for: id), spent: spendingByCategory[id] ?? 0, limit: limit)
         }
     }
 

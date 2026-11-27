@@ -133,8 +133,11 @@ struct SettingsView: View {
         Picker("Currency", selection: Binding(
             get: { settingsManager.selectedCurrency },
             set: { currency in
-                do { try settingsManager.changeCurrency(to: currency) }
-                catch { dataErrorMessage = error.localizedDescription }
+                do {
+                    try settingsManager.changeCurrency(to: currency)
+                } catch {
+                    dataErrorMessage = error.localizedDescription
+                }
             }
         )) {
             ForEach(availableCurrencies, id: \.code) { currency in

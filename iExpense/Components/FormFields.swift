@@ -124,7 +124,7 @@ struct AmountTextField: View {
         TextField(placeholder, text: $shown)
             .keyboardType(input.fractionDigits == 0 ? .numberPad : .decimalPad)
             .onAppear { shown = input.display(raw) }
-            .onChange(of: shown) { oldValue, newValue in
+            .onChange(of: shown) { _, newValue in
                 let updated = input.updating(raw, with: newValue)
                 if updated != raw { raw = updated }
                 let formatted = input.display(updated)
