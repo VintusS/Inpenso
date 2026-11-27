@@ -366,7 +366,7 @@ struct WalletEditor: View {
                 Section {
                     HStack {
                         WalletIcon(wallet: wallet, size: 40)
-                        TextField("Name, e.g. BCA or GoPay", text: $wallet.name)
+                        TextField("Name, e.g. Savings or Travel Card", text: $wallet.name)
                     }
                     Picker("Type", selection: $wallet.kind) {
                         ForEach(WalletKind.allCases) { kind in
