@@ -22,6 +22,7 @@ struct ExpensesListView: View {
     @State private var selectedSortOption: SortOption = .dateDescending
     @State private var selectedTransactionFilter: TransactionFilter = .all
     @State private var searchText = ""
+    @State private var amountBounds = TransactionAmountBounds()
     @State private var selectedCategoryIDs: Set<String> = []
     @State private var isListLoaded = false
 
@@ -60,21 +61,27 @@ struct ExpensesListView: View {
         settingsViewModel.selectedCurrency
     }
 
+    private var searchQuery: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private var filteredExpenses: [Expense] {
+        let query = searchQuery
+        let calendar = Calendar.current
         var result = viewModel.expenses.filter { expense in
-            let month = Calendar.current.component(.month, from: expense.date)
-            let year = Calendar.current.component(.year, from: expense.date)
-            let category = categoryStore.category(for: expense)
+            guard amountBounds.contains(expense.price),
+                  selectedTransactionFilter.matches(expense),
+                  selectedCategoryIDs.isEmpty || selectedCategoryIDs.contains(expense.categoryID)
+            else { return false }
 
-            let matchesDate = month == selectedMonth && year == selectedYear
-            let matchesSearch = searchText.isEmpty ||
-                expense.title.localizedCaseInsensitiveContains(searchText) ||
-                category.displayName.localizedCaseInsensitiveContains(searchText) ||
-                (expense.notes?.localizedCaseInsensitiveContains(searchText) ?? false)
-            let matchesCategory = selectedCategoryIDs.isEmpty || selectedCategoryIDs.contains(expense.categoryID)
-            let matchesType = selectedTransactionFilter.matches(expense)
+            if query.isEmpty {
+                let date = calendar.dateComponents([.month, .year], from: expense.date)
+                return date.month == selectedMonth && date.year == selectedYear
+            }
 
-            return matchesDate && matchesSearch && matchesCategory && matchesType
+            return expense.title.localizedCaseInsensitiveContains(query)
+                || categoryStore.category(for: expense).displayName.localizedCaseInsensitiveContains(query)
+                || expense.notes?.localizedCaseInsensitiveContains(query) == true
         }
 
         switch selectedSortOption {
@@ -128,8 +135,15 @@ struct ExpensesListView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    monthYearPicker
-                        .padding(.top, 8)
+                    if searchQuery.isEmpty {
+                        monthYearPicker
+                            .padding(.top, 8)
+                    } else {
+                        Text("All months")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 8)
+                    }
 
                     if !filteredExpenses.isEmpty {
                         summaryCard
@@ -192,8 +206,13 @@ struct ExpensesListView: View {
                 }
             }
             .sheet(isPresented: $showingFilterSheet) {
-                FilterCategoriesView(selectedCategoryIDs: $selectedCategoryIDs, categories: filterCategories)
-                    .presentationDetents([.medium])
+                TransactionFiltersView(
+                    selectedCategoryIDs: $selectedCategoryIDs,
+                    amountBounds: $amountBounds,
+                    categories: filterCategories,
+                    currencyCode: currencyCode
+                )
+                .presentationDetents([.medium, .large])
             }
             .overlay(undoSnackbar, alignment: .bottom)
         }
@@ -279,7 +298,11 @@ struct ExpensesListView: View {
             Button {
                 showingFilterSheet = true
             } label: {
-                Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
+                Label(
+                    "Filter",
+                    systemImage: amountBounds.isActive || selectedCategoryIDs.count < filterCategoryIDs.count
+                        ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle"
+                )
             }
         }
     }
@@ -392,14 +415,15 @@ struct ExpensesListView: View {
                 .font(.title2)
                 .fontWeight(.bold)
 
-            if !searchText.isEmpty {
+            if !searchQuery.isEmpty {
                 Text("Try adjusting your search or filters")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
-            } else if selectedCategoryIDs.count < filterCategoryIDs.count {
-                Text("Try selecting more categories in the filter")
+            } else if amountBounds.isActive || selectedCategoryIDs.count < filterCategoryIDs.count
+                        || selectedTransactionFilter != .all {
+                Text("Try adjusting your filters")
                     .font(.body)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -407,6 +431,8 @@ struct ExpensesListView: View {
 
                 Button {
                     selectedCategoryIDs = Set(filterCategoryIDs)
+                    selectedTransactionFilter = .all
+                    amountBounds = TransactionAmountBounds()
                 } label: {
                     Text("Reset Filters")
                         .foregroundColor(.accentColor)
@@ -488,10 +514,8 @@ struct ExpensesListView: View {
     }
 
     private func deleteExpenseByID(_ expense: Expense) {
-        if let index = viewModel.expenses.firstIndex(where: { $0.id == expense.id }) {
-            recentlyDeletedExpenses = [expense]
-            viewModel.expenses.remove(at: index)
-            viewModel.saveExpenses()
+        if let deletedExpense = viewModel.removeExpense(id: expense.id) {
+            recentlyDeletedExpenses = [deletedExpense]
 
             showUndoSnackbar = true
 
@@ -505,8 +529,7 @@ struct ExpensesListView: View {
 
     private func undoDelete() {
         undoTimer?.invalidate()
-        viewModel.expenses.append(contentsOf: recentlyDeletedExpenses)
-        viewModel.saveExpenses()
+        viewModel.restoreExpenses(recentlyDeletedExpenses)
         recentlyDeletedExpenses.removeAll()
         showUndoSnackbar = false
     }
@@ -596,22 +619,86 @@ struct ExpenseRowView: View {
     }
 }
 
-struct FilterCategoriesView: View {
+private struct TransactionAmountBounds {
+    var minimum: Double?
+    var maximum: Double?
+
+    var isActive: Bool { minimum != nil || maximum != nil }
+
+    func contains(_ amount: Double) -> Bool {
+        amount >= (minimum ?? -.infinity) && amount <= (maximum ?? .infinity)
+    }
+}
+
+private struct TransactionFiltersView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.locale) private var locale
 
     @Binding var selectedCategoryIDs: Set<String>
+    @Binding var amountBounds: TransactionAmountBounds
     let categories: [FinanceCategory]
-    @State private var tempSelectedCategoryIDs: Set<String>
+    let currencyCode: String
 
-    init(selectedCategoryIDs: Binding<Set<String>>, categories: [FinanceCategory]) {
+    @State private var tempSelectedCategoryIDs: Set<String>
+    @State private var minimum = ""
+    @State private var maximum = ""
+
+    init(
+        selectedCategoryIDs: Binding<Set<String>>,
+        amountBounds: Binding<TransactionAmountBounds>,
+        categories: [FinanceCategory],
+        currencyCode: String
+    ) {
         self._selectedCategoryIDs = selectedCategoryIDs
+        self._amountBounds = amountBounds
         self.categories = categories
+        self.currencyCode = currencyCode
         self._tempSelectedCategoryIDs = State(initialValue: selectedCategoryIDs.wrappedValue)
+    }
+
+    private var amountInput: AmountInput {
+        AmountInput(fractionDigits: currencyFractionDigits(for: currencyCode), locale: locale)
+    }
+
+    private var parsedBounds: TransactionAmountBounds {
+        TransactionAmountBounds(minimum: amountInput.value(of: minimum), maximum: amountInput.value(of: maximum))
+    }
+
+    private var amountError: String? {
+        let bounds = parsedBounds
+        if (!minimum.isEmpty && bounds.minimum == nil) || (!maximum.isEmpty && bounds.maximum == nil) {
+            return "Enter a valid amount."
+        }
+        if let low = bounds.minimum, let high = bounds.maximum, low > high {
+            return "The maximum must be at least the minimum."
+        }
+        return nil
+    }
+
+    private func amountField(_ label: String, text: Binding<String>) -> some View {
+        LabeledContent(label) {
+            AmountTextField(placeholder: "Any", raw: text, input: amountInput)
+                .multilineTextAlignment(.trailing)
+                .accessibilityLabel(label)
+        }
     }
 
     var body: some View {
         NavigationView {
             List {
+                Section {
+                    amountField("Minimum", text: $minimum)
+                    amountField("Maximum", text: $maximum)
+                } header: {
+                    Text("Amount (\(currencyCode))")
+                } footer: {
+                    if let amountError {
+                        Text(amountError).foregroundStyle(.red)
+                    } else {
+                        Text("Leave either amount blank for no limit.")
+                    }
+                }
+
                 Section {
                     ForEach(categories) { category in
                         HStack {
@@ -649,6 +736,10 @@ struct FilterCategoriesView: View {
                     Text("Select which categories to display")
                 }
             }
+            .onAppear {
+                minimum = amountBounds.minimum.map(amountInput.bindingText) ?? ""
+                maximum = amountBounds.maximum.map(amountInput.bindingText) ?? ""
+            }
             .navigationTitle("Filter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -661,8 +752,10 @@ struct FilterCategoriesView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Apply") {
                         selectedCategoryIDs = tempSelectedCategoryIDs
+                        amountBounds = parsedBounds
                         dismiss()
                     }
+                    .disabled(amountError != nil)
                 }
             }
         }

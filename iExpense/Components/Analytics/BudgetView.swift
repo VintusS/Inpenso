@@ -10,6 +10,8 @@ import Charts
 
 /// A component for inputting and saving a budget
 struct BudgetInputView: View {
+    @Environment(\.locale) private var locale
+    @State private var draft: String?
     @Binding var currentBudget: Double
     let currencyCode: String
     let onSave: () -> Void
@@ -24,6 +26,23 @@ struct BudgetInputView: View {
         self.onSave = onSave
     }
     
+    private var amountInput: AmountInput {
+        AmountInput(fractionDigits: currencyFractionDigits(for: currencyCode), locale: locale)
+    }
+
+    private var budgetText: Binding<String> {
+        Binding(
+            // Empty instead of "0" so the placeholder shows and typing doesn't append to a zero.
+            get: { draft ?? (currentBudget > 0 ? amountInput.bindingText(for: currentBudget) : "") },
+            set: {
+                draft = $0
+                if let amount = amountInput.value(of: $0) {
+                    currentBudget = amount
+                }
+            }
+        )
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Set Monthly Budget")
@@ -41,8 +60,7 @@ struct BudgetInputView: View {
                             .fill(Color(.tertiarySystemBackground))
                             .frame(width: 150, height: 40)
                         
-                        TextField("0", value: $currentBudget, format: .currency(code: currencyCode))
-                            .keyboardType(.decimalPad)
+                        AmountTextField(placeholder: amountInput.placeholder, raw: budgetText, input: amountInput)
                             .multilineTextAlignment(.trailing)
                             .padding(.horizontal, 10)
                             .frame(width: 150, height: 40)
@@ -57,7 +75,10 @@ struct BudgetInputView: View {
                     }
                 }
 
-                Button(action: onSave) {
+                Button {
+                    draft = nil
+                    onSave()
+                } label: {
                     let saveBudgetButton: some View = Text("Save Budget")
                         .fontWeight(.semibold)
                         .frame(maxWidth: .infinity)
@@ -73,12 +94,18 @@ struct BudgetInputView: View {
                             .cornerRadius(12)
                     }
                 }
+                .disabled(draft.map { amountInput.value(of: $0) == nil } ?? false)
             }
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color(.secondarySystemBackground))
             )
+        }
+        .onChange(of: currentBudget) {
+            if let draft, amountInput.value(of: draft) != currentBudget {
+                self.draft = nil
+            }
         }
     }
     

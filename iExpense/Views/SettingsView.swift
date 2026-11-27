@@ -15,8 +15,8 @@ struct SettingsView: View {
     @State private var exportURL: URL? = nil
     @State private var showingResetConfirmation = false
     @State private var showingImportSuccess = false
-    @State private var showingImportFailure = false
-    @State private var showingExportSuccess = false
+    @State private var restorePreview: RestorePreview?
+    @State private var dataErrorMessage: String?
     
     var body: some View {
         NavigationView {
@@ -40,6 +40,13 @@ struct SettingsView: View {
                 aboutSection
             }
             .navigationTitle("Settings")
+            .onAppear { settingsManager.refreshLedgerCurrency() }
+            .onReceive(NotificationCenter.default.publisher(for: .inpensoDataDidChange)) { _ in
+                settingsManager.refreshLedgerCurrency()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+                settingsManager.refreshLedgerCurrency()
+            }
             .sheet(isPresented: $showingImportFilePicker) {
                 documentPicker
             }
@@ -49,22 +56,45 @@ struct SettingsView: View {
             .alert("Data Reset", isPresented: $showingResetConfirmation) {
                 resetAlertButtons
             } message: {
-                Text("This will delete all your expenses and budgets. This action cannot be undone.")
+                Text("This will delete all transactions, transfers, and monthly budgets. This action cannot be undone.")
             }
-            .alert("Import Successful", isPresented: $showingImportSuccess) {
+            .confirmationDialog(
+                "Restore Backup",
+                isPresented: Binding(
+                    get: { restorePreview != nil },
+                    set: { if !$0 { restorePreview = nil } }
+                ),
+                titleVisibility: .visible,
+                presenting: restorePreview
+            ) { preview in
+                Button("Merge Backup") {
+                    restore(preview, mode: .merge)
+                }
+                .disabled(preview.currencyDiffers || (
+                    preview.newTransactionCount == 0 && preview.newBudgetCount == 0
+                        && preview.newCustomCategoryCount == 0 && preview.newWalletCount == 0
+                        && preview.newTransferCount == 0
+                ))
+                Button("Replace All Data", role: .destructive) {
+                    restore(preview, mode: .replace)
+                }
+                Button("Cancel", role: .cancel) { }
+            } message: { preview in
+                Text(restoreSummary(preview))
+            }
+            .alert("Backup Restored", isPresented: $showingImportSuccess) {
+                Button("OK", role: .cancel) { }
+            }
+            .alert(
+                "Data Problem",
+                isPresented: Binding(
+                    get: { dataErrorMessage != nil },
+                    set: { if !$0 { dataErrorMessage = nil } }
+                )
+            ) {
                 Button("OK", role: .cancel) { }
             } message: {
-                Text("Your data has been imported successfully.")
-            }
-            .alert("Import Failed", isPresented: $showingImportFailure) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Failed to import data. Please check the file format and try again.")
-            }
-            .alert("Export Successful", isPresented: $showingExportSuccess) {
-                Button("OK", role: .cancel) { }
-            } message: {
-                Text("Your data has been exported successfully.")
+                Text(dataErrorMessage ?? "")
             }
         }
     }
@@ -87,13 +117,26 @@ struct SettingsView: View {
     }
     
     private var currencySection: some View {
-        Section(header: Text("Currency")) {
+        Section {
             currencyPicker
+                .disabled(settingsManager.isCurrencyLocked)
+        } header: {
+            Text("Currency")
+        } footer: {
+            if settingsManager.isCurrencyLocked {
+                Text("Currency is locked while the ledger contains transactions or transfers.")
+            }
         }
     }
     
     private var currencyPicker: some View {
-        Picker("Currency", selection: $settingsManager.selectedCurrency) {
+        Picker("Currency", selection: Binding(
+            get: { settingsManager.selectedCurrency },
+            set: { currency in
+                do { try settingsManager.changeCurrency(to: currency) }
+                catch { dataErrorMessage = error.localizedDescription }
+            }
+        )) {
             ForEach(availableCurrencies, id: \.code) { currency in
                 currencyRow(for: currency)
             }
@@ -157,6 +200,9 @@ struct SettingsView: View {
     private var dataManagementSection: some View {
         Section(header: Text("Data Management")) {
             exportButton
+            Button(action: exportCSV) {
+                Label("Export CSV", systemImage: "tablecells")
+            }
             importButton
             resetButton
         }
@@ -166,7 +212,7 @@ struct SettingsView: View {
         Button(action: {
             exportData()
         }) {
-            Label("Export Data", systemImage: "square.and.arrow.up")
+            Label("Back Up Data", systemImage: "square.and.arrow.up")
         }
     }
     
@@ -174,7 +220,7 @@ struct SettingsView: View {
         Button(action: {
             showingImportFilePicker = true
         }) {
-            Label("Import Data", systemImage: "square.and.arrow.down")
+            Label("Restore Backup", systemImage: "square.and.arrow.down")
         }
     }
     
@@ -208,11 +254,11 @@ struct SettingsView: View {
             allowsMultipleSelection: false
         ) { urls in
             guard let url = urls.first else { return }
-            let success = settingsManager.importData(from: url)
-            if success {
-                showingImportSuccess = true
-            } else {
-                showingImportFailure = true
+            do {
+                restorePreview = try settingsManager.previewRestore(from: url)
+            } catch {
+                dataErrorMessage = (error as? LocalizedError)?.errorDescription
+                    ?? "This file couldn't be read. Choose a backup made with Inpenso."
             }
         }
     }
@@ -235,11 +281,61 @@ struct SettingsView: View {
     }
     
     private func exportData() {
-        if let url = settingsManager.exportData() {
-            exportURL = url
+        do {
+            exportURL = try settingsManager.exportBackup()
             showingExportShareSheet = true
-            showingExportSuccess = true
+        } catch {
+            dataErrorMessage = "The backup couldn't be created. Try again."
         }
+    }
+
+    private func exportCSV() {
+        do {
+            guard let ledger = StorageService.loadLedger() else { throw WalletError.storageFailure }
+            exportURL = try CSVExportService.export(
+                transactions: ledger.transactions,
+                currencyCode: ledger.currency,
+                wallets: ledger.wallets,
+                transfers: ledger.transfers,
+                categoryName: { categoryStore.category(for: $0).displayName }
+            )
+            showingExportShareSheet = true
+        } catch {
+            dataErrorMessage = "The CSV couldn't be created. Try again."
+        }
+    }
+
+    private func restore(_ preview: RestorePreview, mode: RestoreMode) {
+        do {
+            try settingsManager.applyRestore(preview, mode: mode)
+            showingImportSuccess = true
+        } catch {
+            dataErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func restoreSummary(_ preview: RestorePreview) -> String {
+        var lines: [String] = []
+        lines.append("\(preview.totalTransactionCount) transactions in this file: \(preview.newTransactionCount) new, \(preview.duplicateTransactionCount) already here.")
+        if preview.newWalletCount > 0 {
+            lines.append("\(preview.newWalletCount) new wallets.")
+        }
+        if preview.newTransferCount > 0 {
+            lines.append("\(preview.newTransferCount) new transfers.")
+        }
+        if preview.newBudgetCount > 0 {
+            lines.append("\(preview.newBudgetCount) monthly budgets not set here yet.")
+        }
+        if preview.newCustomCategoryCount > 0 {
+            lines.append("\(preview.newCustomCategoryCount) custom categories to add.")
+        }
+        if preview.isLegacyFormat {
+            lines.append("Older export: contains transactions only. Amounts will use your current currency (\(preview.currentCurrencyCode)).")
+        } else if preview.currencyDiffers {
+            lines.append("This backup uses \(preview.backup.currencyCode); you use \(preview.currentCurrencyCode). Replacing the ledger restores \(preview.backup.currencyCode).")
+        }
+        lines.append("Replacing deletes your current transactions, budgets and categories.")
+        return lines.joined(separator: "\n\n")
     }
 }
 

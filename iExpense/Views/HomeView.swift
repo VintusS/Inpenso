@@ -14,6 +14,7 @@ struct HomeView: View {
 
     @ObservedObject var viewModel: ExpenseViewModel
     @ObservedObject var analyticsViewModel: AnalyticsViewModel
+    @ObservedObject var recurringViewModel: RecurringViewModel
     @State private var showingAddExpense = false
     @State private var showRecentExpenses = true
     @State private var animateCards = false
@@ -32,6 +33,9 @@ struct HomeView: View {
                 VStack(spacing: 20) {
                     headerCard
                         .padding(.top, 10)
+                    if !recurringViewModel.dueOccurrences.isEmpty || recurringViewModel.rules.isEmpty {
+                        RecurringDueCard(recurringViewModel: recurringViewModel)
+                    }
                     recentSpendingCard
                     categoryBreakdownCard
                     recentExpensesSection
@@ -468,8 +472,10 @@ struct HomeView: View {
 #Preview {
     HomeView(
         viewModel: ExpenseViewModel(),
-        analyticsViewModel: AnalyticsViewModel(expenses: [])
+        analyticsViewModel: AnalyticsViewModel(expenses: []),
+        recurringViewModel: RecurringViewModel()
     )
     .environmentObject(SettingsViewModel())
+        .environmentObject(WalletsViewModel())
     .environmentObject(CategoryStore())
 }

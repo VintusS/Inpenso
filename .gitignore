@@ -40,3 +40,6 @@ Package.resolved
 # Temporary files
 *.tmp
 .env.local
+
+# Local signing overrides (personal team, bundle ID, app group)
+Config/Signing.local.xcconfig

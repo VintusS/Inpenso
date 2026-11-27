@@ -7,10 +7,11 @@ import AppIntents
 import Foundation
 
 // Global app group ID for consistency - must match StorageService.appGroupID
-let appGroupID = "group.com.vintuss.Inpenso"
+let appGroupID = StorageService.appGroupID
 
 // Global function to get currency code from shared UserDefaults
 func getAppCurrency() -> String {
+    if let currency = StorageService.loadLedger()?.currency { return currency }
     // First try to get from shared defaults with explicit initialization
     let sharedDefaults = UserDefaults(suiteName: appGroupID)
     
@@ -46,13 +47,8 @@ func getMonthlyBudget() -> Double {
             do {
                 let budgets = try JSONDecoder().decode([String: Double].self, from: budgetsData)
                 
-                // Get current month in format "MM-YYYY"
-                let dateFormatter = DateFormatter()
-                dateFormatter.dateFormat = "MM-yyyy"
-                let currentMonthKey = dateFormatter.string(from: Date())
-                
-                // Return the budget for the current month
-                return budgets[currentMonthKey] ?? 0
+                let now = Calendar.current.dateComponents([.month, .year], from: Date())
+                return StorageService.effectiveBudget(month: now.month ?? 1, year: now.year ?? 2000, in: budgets)
             } catch {
                 return 0
             }
@@ -436,6 +432,8 @@ struct iExpenseWidgetEntryView: View {
             return "heart.fill"
         case .education:
             return "book.fill"
+        case .work:
+            return "briefcase.fill"
         case .others:
             return "ellipsis"
         }

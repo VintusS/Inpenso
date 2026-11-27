@@ -8,19 +8,22 @@
 import SwiftUI
 
 struct EditExpenseView: View {
+    @Environment(\.locale) private var locale
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var settingsViewModel: SettingsViewModel
+    @EnvironmentObject private var walletsViewModel: WalletsViewModel
     @EnvironmentObject private var categoryStore: CategoryStore
     @ObservedObject var viewModel: ExpenseViewModel
 
     @State private var title: String
-    @State private var price: String
+    @State private var priceDraft: String?
     @State private var selectedDate: Date
     @State private var selectedCategoryID: String
     @State private var transactionType: TransactionType
     @State private var showDatePicker: Bool = false
     @State private var notes: String = ""
+    @State private var walletID: UUID?
     @State private var keyboardVisible: Bool = false
     @State private var viewID = UUID()
     let expense: Expense
@@ -29,14 +32,32 @@ struct EditExpenseView: View {
         self.viewModel = viewModel
         self.expense = expense
         _title = State(initialValue: expense.title)
-        _price = State(initialValue: String(format: "%.2f", expense.price))
         _selectedDate = State(initialValue: expense.date)
         _selectedCategoryID = State(initialValue: expense.categoryID)
         _transactionType = State(initialValue: expense.type)
         _notes = State(initialValue: expense.notes ?? "")
+        _walletID = State(initialValue: expense.walletID)
     }
 
     // Current currency symbol
+    private var amountInput: AmountInput {
+        AmountInput(fractionDigits: currencyFractionDigits(for: settingsViewModel.selectedCurrency), locale: locale)
+    }
+
+    private var price: Binding<String> {
+        Binding(
+            get: { priceDraft ?? amountInput.bindingText(for: expense.price) },
+            set: { priceDraft = $0 }
+        )
+    }
+
+    private var priceValue: Double? {
+        if let priceDraft {
+            return amountInput.value(of: priceDraft)
+        }
+        return expense.price
+    }
+
     private var currencySymbol: String {
         let locale = Locale.current
         let currencyCode = settingsViewModel.selectedCurrency
@@ -71,11 +92,15 @@ struct EditExpenseView: View {
                                 
                                 CurrencyFormField(
                                     label: "Amount",
-                                    amount: $price,
-                                    currencySymbol: currencySymbol
+                                    amount: price,
+                                    currencySymbol: currencySymbol,
+                                    fractionDigits: amountInput.fractionDigits
                                 )
                                 .padding(.horizontal)
-                                .padding(.bottom, 8)
+
+                                WalletFormField(selection: $walletID, wallets: walletsViewModel.wallets, including: expense.walletID)
+                                    .padding(.horizontal)
+                                    .padding(.bottom, 8)
                             }
                         }
                         
@@ -119,6 +144,7 @@ struct EditExpenseView: View {
                         // Action buttons
                         VStack(spacing: 12) {
                             Button(action: {
+                                guard priceValue != nil else { return }
                                 hideKeyboard()
                                 saveChanges()
                                 HapticFeedback.success()
@@ -215,32 +241,30 @@ struct EditExpenseView: View {
     }
 
     private func saveChanges() {
-        guard let priceValue = Double(price.replacingOccurrences(of: ",", with: ".")) else { return }
+        guard let priceValue else { return }
         
-        if let index = viewModel.expenses.firstIndex(where: { $0.id == expense.id }) {
-            let selectedCategory = categoryStore.category(for: selectedCategoryID)
-            viewModel.expenses[index].title = title
-            viewModel.expenses[index].price = priceValue
-            viewModel.expenses[index].date = selectedDate
-            viewModel.expenses[index].type = transactionType
-            viewModel.expenses[index].categoryID = selectedCategory.id
-            viewModel.expenses[index].category = Category.category(from: selectedCategory.id) ?? .others
-            let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
-            viewModel.expenses[index].notes = trimmedNotes.isEmpty ? nil : trimmedNotes
-            viewModel.saveExpenses()
+        let selectedCategory = categoryStore.category(for: selectedCategoryID)
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        viewModel.updateExpense(id: expense.id) { transaction in
+            transaction.title = title
+            if priceDraft != nil { transaction.price = priceValue }
+            transaction.date = selectedDate
+            transaction.type = transactionType
+            transaction.categoryID = selectedCategory.id
+            transaction.category = Category.category(from: selectedCategory.id) ?? .others
+            transaction.notes = trimmedNotes.isEmpty ? nil : trimmedNotes
+            transaction.walletID = walletID
         }
     }
 
     private func deleteExpense() {
-        if let index = viewModel.expenses.firstIndex(where: { $0.id == expense.id }) {
-            viewModel.expenses.remove(at: index)
-            viewModel.saveExpenses()
-        }
+        viewModel.deleteExpenses([expense])
     }
 }
 
 #Preview {
     EditExpenseView(viewModel: ExpenseViewModel(), expense: Expense(title: "Sample", price: 10, date: Date(), category: .food))
         .environmentObject(SettingsViewModel())
+        .environmentObject(WalletsViewModel())
         .environmentObject(CategoryStore())
 }

@@ -84,6 +84,18 @@ struct AnalyticsView: View {
         VStack(spacing: 20) {
             // Summary Cards
             summaryCardsGrid
+
+            if analyticsViewModel.currentBudget <= 0 {
+                Button {
+                    withAnimation { selectedTab = .budget }
+                } label: {
+                    Label("Set a Monthly Budget", systemImage: "target")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.bordered)
+            }
             
             // Daily Spending Graph
             DailySpendingChartView(
@@ -423,6 +435,13 @@ struct AnalyticsView: View {
                 )
             }
             
+            CategoryBudgetsView(
+                limits: analyticsViewModel.categoryBudgets,
+                spendingByCategory: analyticsViewModel.spendingByCategory,
+                currencyCode: currencyCode,
+                onSave: analyticsViewModel.saveCategoryBudgets
+            )
+
             // Historical budget compliance
             BudgetHistoryView(complianceData: createBudgetComplianceData())
         }
@@ -449,8 +468,8 @@ struct AnalyticsView: View {
         
         // Skip the current month and use previous months
         for trend in analyticsViewModel.monthlyTrends.dropLast() {
-            let key = analyticsViewModel.budgetKey(forMonth: trend.month, year: trend.year)
-            if let budget = analyticsViewModel.monthlyBudgets[key], budget > 0 {
+            let budget = StorageService.effectiveBudget(month: trend.month, year: trend.year, in: analyticsViewModel.monthlyBudgets)
+            if budget > 0 {
                 let compliancePercent = (trend.amount / budget) * 100
                 let color: Color = compliancePercent <= 90 ? .green : 
                                     (compliancePercent <= 100 ? .blue : 

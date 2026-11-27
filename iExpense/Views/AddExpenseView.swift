@@ -8,9 +8,11 @@
 import SwiftUI
 
 struct AddExpenseView: View {
+    @Environment(\.locale) private var locale
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var settingsViewModel: SettingsViewModel
+    @EnvironmentObject private var walletsViewModel: WalletsViewModel
     @EnvironmentObject private var categoryStore: CategoryStore
     @ObservedObject var viewModel: ExpenseViewModel
     
@@ -21,6 +23,7 @@ struct AddExpenseView: View {
     @State private var transactionType: TransactionType = .expense
     @State private var selectedDate: Date = Date()
     @State private var notes: String = ""
+    @State private var walletID: UUID? = WalletService.defaultWalletID()
     
     // UI States
     @State private var showDatePicker = false
@@ -30,6 +33,10 @@ struct AddExpenseView: View {
     @State private var animateSuccess = false
     
     // Current currency symbol
+    private var amountInput: AmountInput {
+        AmountInput(fractionDigits: currencyFractionDigits(for: settingsViewModel.selectedCurrency), locale: locale)
+    }
+
     private var currencySymbol: String {
         let locale = Locale.current
         let currencyCode = settingsViewModel.selectedCurrency
@@ -158,10 +165,14 @@ struct AddExpenseView: View {
                     label: "Amount",
                     amount: $price,
                     currencySymbol: currencySymbol,
+                    fractionDigits: amountInput.fractionDigits,
                     clearAction: { price = "" }
                 )
                 .padding(.horizontal)
-                .padding(.bottom, 8)
+
+                WalletFormField(selection: $walletID, wallets: walletsViewModel.wallets)
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
             }
         }
     }
@@ -276,8 +287,7 @@ struct AddExpenseView: View {
             return
         }
         
-        price = price.replacingOccurrences(of: ",", with: ".")
-        guard let priceValue = Double(price) else {
+        guard let priceValue = amountInput.value(of: price) else {
             showValidationAlert("Please enter a valid amount.")
             return
         }
@@ -299,7 +309,8 @@ struct AddExpenseView: View {
             category: legacyCategory,
             type: transactionType,
             categoryID: selectedCategory.id,
-            notes: trimmedNotes.isEmpty ? nil : trimmedNotes
+            notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+            walletID: walletID
         )
         
         // Trigger success haptic
@@ -334,5 +345,6 @@ extension Locale {
 #Preview {
     AddExpenseView(viewModel: ExpenseViewModel())
         .environmentObject(SettingsViewModel())
+        .environmentObject(WalletsViewModel())
         .environmentObject(CategoryStore())
 }
